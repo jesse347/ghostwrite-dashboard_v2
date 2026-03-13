@@ -3,435 +3,1477 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ghostwrite · market intel</title>
+<title>ghostladder · market intel</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg:#080808; --s1:#101010; --s2:#161616; --s3:#1e1e1e; --border:#282828;
-  --accent:#e8ff47; --accent-dim:rgba(232,255,71,0.12);
-  --red:#ff4040; --green:#3ddc84; --text:#f0f0f0; --muted:#666; --muted2:#999;
-  --mono:'DM Mono',monospace; --display:'Bebas Neue',sans-serif; --serif:'Instrument Serif',serif;
+  --bg: #080808;
+  --s1: #101010;
+  --s2: #161616;
+  --s3: #1e1e1e;
+  --border: #282828;
+  --accent: #e8ff47;
+  --accent-dim: rgba(232,255,71,0.12);
+  --red: #ff4040;
+  --green: #3ddc84;
+  --text: #f0f0f0;
+  --muted: #666;
+  --muted2: #999;
+  --mono: 'DM Mono', monospace;
+  --display: 'Bebas Neue', sans-serif;
+  --serif: 'Instrument Serif', serif;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
-body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
 
-/* ── Header ── */
-header{position:sticky;top:0;z-index:100;background:rgba(8,8,8,0.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:var(--display);font-size:20px;letter-spacing:3px;color:var(--text)}
-.logo em{color:var(--accent);font-style:normal}
-.header-right{display:flex;align-items:center;gap:20px}
-.nav-links{display:flex;gap:20px}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.15s}
-.nav-links a:hover{color:var(--text)}
-.nav-links a.active{color:var(--accent)}
-.live-badge{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
-.refresh-btn{background:var(--s3);border:1px solid var(--border);color:var(--muted2);font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all 0.15s}
-.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Layout ── */
-.page{max-width:1440px;margin:0 auto;padding:32px}
-.section-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-/* ── Stat cards ── */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:32px}
-.stat-card{background:var(--s1);padding:22px 24px;position:relative;overflow:hidden;transition:background 0.2s}
-.stat-card:hover{background:var(--s2)}
-.stat-card::before{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:var(--accent);transition:width 0.5s ease}
-.stat-card:hover::before{width:100%}
-.stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
-.stat-value{font-family:var(--display);font-size:44px;line-height:1;color:var(--text);letter-spacing:1px}
-.stat-sub{font-size:10px;color:var(--muted2);margin-top:5px;letter-spacing:0.5px}
+/* Grain */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
 
-/* ── Chips + filters ── */
-.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:24px;flex-wrap:wrap}
-.filter-group{display:flex;gap:4px;align-items:center}
-.filter-label-sm{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-right:4px}
-.chip{background:var(--s2);border:1px solid var(--border);color:var(--muted2);font-family:var(--mono);font-size:10px;letter-spacing:0.5px;padding:5px 12px;cursor:pointer;text-transform:uppercase;transition:all 0.12s;white-space:nowrap}
-.chip:hover{border-color:var(--muted2);color:var(--text)}
-.chip.active{background:var(--accent);border-color:var(--accent);color:#000}
-.search-wrap{position:relative;margin-left:auto}
-.search-input{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 14px 6px 32px;width:220px;outline:none;transition:border-color 0.15s}
-.search-input:focus{border-color:var(--accent)}
-.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none}
+/* ── Header ─────────────────────────────────────────────────────────────────── */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(8,8,8,0.94);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
-/* ── Product grid ── */
-.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:32px}
-.product-card{background:var(--s1);padding:20px;cursor:pointer;transition:background 0.15s;position:relative}
-.product-card:hover{background:var(--s2)}
-.product-card-set{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.product-card-player{font-family:var(--display);font-size:22px;letter-spacing:1px;margin-bottom:8px;line-height:1}
-.product-card-variant{display:inline-block;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border:1px solid;margin-bottom:12px}
-.product-card-price{font-family:var(--display);font-size:32px;color:var(--accent);line-height:1;margin-bottom:8px}
-.product-card-sub{display:flex;gap:12px;flex-wrap:wrap}
-.product-card-meta{font-size:9px;color:var(--muted);letter-spacing:0.5px}
-.product-card-meta span{color:var(--muted2)}
-.mult-badge{position:absolute;top:14px;right:14px;font-family:var(--display);font-size:11px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(232,255,71,0.3);padding:2px 7px;letter-spacing:1px}
+.logo {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 3px;
+  color: var(--text);
+}
+.logo em { color: var(--accent); font-style: normal; }
 
-/* Variant colors */
-.v-fire{color:#ff4d00;border-color:#ff4d00}.v-chrome{color:#a8c7fa;border-color:#a8c7fa}
-.v-gold{color:#ffd700;border-color:#ffd700}.v-emerald{color:#3ddc84;border-color:#3ddc84}
-.v-vides{color:#b47aff;border-color:#b47aff}.v-victory{color:#ff9500;border-color:#ff9500}
-.v-base{color:#888;border-color:#888}.v-sp{color:#c084fc;border-color:#c084fc}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 
-/* ── Two/three col ── */
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
-.panel{background:var(--s1);border:1px solid var(--border);padding:20px}
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: blink 2s infinite;
+}
+@keyframes blink {
+  0%,100% { opacity:1; }
+  50% { opacity:0.3; }
+}
 
-/* ── Variant avg bars ── */
-.variant-bars{display:flex;flex-direction:column;gap:10px}
-.vbar-row{display:flex;align-items:center;gap:10px}
-.vbar-label{width:60px;font-size:9px;text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
-.vbar-track{flex:1;height:6px;background:var(--s3);border-radius:1px;overflow:hidden}
-.vbar-fill{height:100%;border-radius:1px;transition:width 0.8s ease}
-.vbar-val{width:50px;text-align:right;font-family:var(--display);font-size:13px;color:var(--accent)}
+.refresh-btn {
+  background: var(--s3);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ── Sales feed ── */
-.sales-list{display:flex;flex-direction:column;gap:1px}
-.sale-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--border);transition:background 0.12s}
-.sale-row:hover{background:var(--s2)}
-.sale-img{width:36px;height:36px;object-fit:cover;flex-shrink:0;background:var(--s3)}
-.sale-info{flex:1;min-width:0}
-.sale-player{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sale-meta{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:0.5px}
-.sale-price{font-family:var(--display);font-size:16px;color:var(--accent);flex-shrink:0}
-.sale-date{font-size:9px;color:var(--muted2);flex-shrink:0}
+/* ── Layout ─────────────────────────────────────────────────────────────────── */
+.page { max-width: 1440px; margin: 0 auto; padding: 32px; }
 
-/* ── Chart ── */
-.chart-container{position:relative;height:200px}
+/* ── Section titles ─────────────────────────────────────────────────────────── */
+.section-label {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
 
-/* ── Movers ── */
-.movers-table{width:100%;border-collapse:collapse;font-size:11px}
-.movers-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--border)}
-.movers-table td{padding:8px 0;border-bottom:1px solid var(--border);vertical-align:middle}
-.movers-table tr:last-child td{border-bottom:none}
-.mover-name{color:var(--text);font-size:11px}
-.mover-up{color:var(--green);font-family:var(--display);font-size:13px}
-.mover-down{color:var(--red);font-family:var(--display);font-size:13px}
-.mover-spark{display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle}
-.mover-spark span{display:inline-block;width:6px;border-radius:1px}
+/* ── Stat cards ─────────────────────────────────────────────────────────────── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.stat-card {
+  background: var(--s1);
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.stat-card:hover { background: var(--s2); }
+.stat-card::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 0; height: 2px;
+  background: var(--accent);
+  transition: width 0.5s ease;
+}
+.stat-card:hover::before { width: 100%; }
+.stat-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-family: var(--display);
+  font-size: 44px;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: 1px;
+}
+.stat-sub {
+  font-size: 10px;
+  color: var(--muted2);
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+}
 
-/* ── Power rankings ── */
-.power-grid{display:flex;flex-direction:column;gap:6px}
-.power-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
-.power-row:last-child{border-bottom:none}
-.power-rank{font-family:var(--display);font-size:18px;width:28px;text-align:center;color:var(--muted)}
-.power-rank.top3{color:var(--accent)}
-.power-info{flex:1;min-width:0}
-.power-name{font-size:12px;color:var(--text)}
-.power-meta{font-size:9px;color:var(--muted);margin-top:2px}
-.power-score-wrap{width:120px;flex-shrink:0}
-.power-score{font-family:var(--display);font-size:14px;color:var(--accent);text-align:right;margin-bottom:3px}
-.power-bar-bg{height:3px;background:var(--s3);border-radius:1px}
-.power-bar-fill{height:100%;background:var(--accent);border-radius:1px;opacity:0.6}
+/* ── Filter bar ─────────────────────────────────────────────────────────────── */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.filter-group { display: flex; gap: 4px; align-items: center; }
+.filter-label-sm {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 4px;
+}
+.chip {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 5px 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.chip:hover { border-color: var(--muted2); color: var(--text); }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #000; }
 
-/* ── Top players ── */
-.top-players-table{width:100%;border-collapse:collapse}
-.top-players-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--border)}
-.top-players-table td{padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;vertical-align:middle}
-.top-rank{color:var(--muted);font-family:var(--display);font-size:14px;width:24px}
-.top-player-name{color:var(--text)}
-.top-player-price{font-family:var(--display);font-size:15px}
-.top-player-bar-wrap{height:3px;background:var(--s3);border-radius:1px;width:80px}
-.top-player-bar{height:100%;border-radius:1px}
+.search-wrap { position: relative; margin-left: auto; }
+.search-input {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 14px 6px 32px;
+  width: 220px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 12px;
+  pointer-events: none;
+}
 
-/* ── Set×Variant table ── */
-.sv-table{width:100%;border-collapse:collapse;font-size:10px}
-.sv-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 8px 8px 0;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
-.sv-table th:first-child{text-align:left}
-.sv-table td{padding:6px 8px 6px 0;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2);font-family:var(--display);font-size:12px}
-.sv-table td:first-child{text-align:left;color:var(--text);font-family:var(--mono);font-size:9px}
+/* ── Product grid ───────────────────────────────────────────────────────────── */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+.product-card {
+  background: var(--s1);
+  padding: 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+.product-card:hover { background: var(--s2); }
+.product-card-set {
+  font-size: 8px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.product-card-player {
+  font-family: var(--display);
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.product-card-variant {
+  display: inline-block;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid;
+  margin-bottom: 14px;
+}
+.v-fire    { border-color: #ff4040; color: #ff4040; }
+.v-chrome  { border-color: #a0c4ff; color: #a0c4ff; }
+.v-gold    { border-color: #ffd700; color: #ffd700; }
+.v-emerald { border-color: #3ddc84; color: #3ddc84; }
+.v-victory { border-color: #c084fc; color: #c084fc; }
+.v-vides   { border-color: #ff9500; color: #ff9500; }
+.v-sp      { border-color: #c084fc; color: #c084fc; }
+.v-base    { border-color: var(--muted); color: var(--muted); }
 
-/* ── Misc ── */
-.league-tabs{display:flex;gap:4px;margin-bottom:16px}
-.loading-state{padding:60px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px}
-.loading-spinner{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{padding:32px;text-align:center;color:var(--muted);font-size:11px}
-.error-banner{background:rgba(255,64,64,0.1);border:1px solid rgba(255,64,64,0.3);padding:12px 16px;color:#ff6b6b;font-size:11px;margin-bottom:24px}
+.product-card-price {
+  font-family: var(--display);
+  font-size: 36px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  line-height: 1;
+}
+.product-card-sub {
+  display: flex;
+  gap: 14px;
+  margin-top: 8px;
+}
+.product-card-meta {
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+}
+.product-card-meta span { color: var(--muted2); }
+
+.mult-badge {
+  position: absolute;
+  top: 16px; right: 16px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid rgba(232,255,71,0.3);
+}
+
+/* ── Two-col layout ─────────────────────────────────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+/* ── Panel ───────────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  padding: 22px;
+}
+.panel-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.chart-wrap { position: relative; height: 220px; }
+
+/* ── Variant averages ───────────────────────────────────────────────────────── */
+.variant-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.variant-row:last-child { border-bottom: none; }
+.variant-name {
+  width: 70px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.variant-bar-wrap { flex: 1; height: 3px; background: var(--border); }
+.variant-bar { height: 100%; transition: width 0.8s ease; }
+.variant-price {
+  font-family: var(--display);
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+  width: 60px;
+  text-align: right;
+}
+.variant-count { font-size: 9px; color: var(--muted); width: 50px; text-align: right; }
+
+/* ── Recent sales ───────────────────────────────────────────────────────────── */
+.sales-table { width: 100%; border-collapse: collapse; }
+.sales-table th {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sales-table td {
+  font-size: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted2);
+}
+.sales-table tr:last-child td { border-bottom: none; }
+.sales-table tr:hover td { color: var(--text); }
+.sale-player { color: var(--text) !important; font-size: 11px !important; }
+.sale-price {
+  font-family: var(--display);
+  font-size: 18px !important;
+  color: var(--accent) !important;
+  letter-spacing: 0.5px;
+}
+
+/* ── Set+variant table ──────────────────────────────────────────────────────── */
+.sv-table { width: 100%; border-collapse: collapse; }
+.sv-table th {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sv-table td {
+  font-size: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted2);
+}
+.sv-table tr:last-child td { border-bottom: none; }
+.sv-table tr:hover td { color: var(--text); }
+.sv-price { font-family: var(--display); font-size: 18px !important; color: var(--accent) !important; }
+
+/* ── Empty / loading states ─────────────────────────────────────────────────── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.loading::before {
+  content: '';
+  width: 16px; height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+}
+
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
+.footer {
+  text-align: center;
+  padding: 32px;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+}
+
+/* ── Sales feed ─────────────────────────────────────────────────────────────── */
+.sales-feed {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin-bottom: 32px;
+  overflow: hidden;
+  max-height: 290px;
+}
+.sale-card {
+  background: var(--s1);
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.sale-card:hover { background: var(--s2); }
+.sale-card-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  background: var(--s3);
+  display: block;
+}
+.sale-card-img-placeholder {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--s3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 24px;
+}
+.sale-card-body {
+  padding: 10px 12px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sale-card-player {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.sale-card-set {
+  font-size: 8px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sale-card-price {
+  font-family: var(--display);
+  font-size: 24px;
+  color: var(--accent);
+  line-height: 1.1;
+  margin-top: 4px;
+}
+.sale-card-variant {
+  display: inline-block;
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border: 1px solid;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+.sale-card-date {
+  font-size: 8px;
+  color: var(--muted);
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+
+/* ── Movers + Top Players tables ──────────────────────────────────────────── */
+.movers-table, .top-players-table { width: 100%; border-collapse: collapse; }
+.movers-table th, .top-players-table th {
+  font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); text-align: left; padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+.movers-table td, .top-players-table td {
+  font-size: 10px; padding: 8px 0; border-bottom: 1px solid var(--border);
+  color: var(--muted2); vertical-align: middle;
+}
+.movers-table tr:last-child td, .top-players-table tr:last-child td { border-bottom: none; }
+.movers-table tr:hover td, .top-players-table tr:hover td { color: var(--text); }
+.mover-name { color: var(--text) !important; font-size: 11px !important; }
+.mover-up { color: #3ddc84 !important; font-weight: 500; }
+.mover-down { color: #ff4040 !important; font-weight: 500; }
+.mover-bar-wrap { display: flex; align-items: center; gap: 6px; }
+.mover-spark {
+  display: inline-flex; align-items: flex-end; gap: 1px;
+  height: 20px; vertical-align: middle;
+}
+.mover-spark span {
+  width: 4px; border-radius: 1px; display: inline-block;
+  transition: height 0.3s;
+}
+.top-rank {
+  font-family: var(--display); font-size: 18px;
+  color: var(--muted); width: 28px;
+}
+.top-player-name { color: var(--text) !important; font-size: 11px !important; }
+.top-player-price { font-family: var(--display); font-size: 20px !important; color: var(--accent) !important; }
+.top-player-bar-wrap { width: 80px; height: 3px; background: var(--border); }
+.top-player-bar { height: 100%; background: var(--accent); }
+/* ── League tab filter bar ───────────────────────────────────────────────────── */
+.filter-bar { margin-bottom: 0; }
+
+
+/* ── Power Rankings ──────────────────────────────────────────────────────────── */
+.power-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.power-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 2px; transition: border-color 0.15s; cursor: default;
+}
+.power-row:hover { border-color: var(--muted2); }
+.power-rank {
+  font-family: var(--display); font-size: 16px; color: var(--muted2);
+  width: 22px; flex-shrink: 0; text-align: right;
+}
+.power-rank.top3 { color: var(--accent); }
+.power-info { flex: 1; min-width: 0; }
+.power-name { font-size: 11px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.power-meta { font-size: 8px; color: var(--muted); letter-spacing: 0.5px; margin-top: 1px; }
+.power-score-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.power-score { font-family: var(--display); font-size: 15px; color: var(--accent); }
+.power-bar-bg { width: 60px; height: 2px; background: var(--border); border-radius: 1px; }
+.power-bar-fill { height: 100%; background: var(--accent); border-radius: 1px; transition: width 0.4s ease; }
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .two-col, .three-col { grid-template-columns: 1fr; }
+  .page { padding: 20px; }
+  header { padding: 0 20px; }
+}
+
+/* ── Animations ─────────────────────────────────────────────────────────────── */
+.panel, .stat-card, .product-card {
+  animation: fadeUp 0.35s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">ghost<em>write</em></div>
+  <div class="logo">ghost<em>ladder</em> <span style="font-size:11px;color:var(--muted);letter-spacing:2px;font-family:var(--mono);font-weight:300">market intel</span></div>
   <div class="header-right">
-    <nav class="nav-links">
-      <a href="index.html" class="active">dashboard</a>
-      <a href="guide.html">price guide</a>
-      <a href="heatmap.html">heat map</a>
-      <a href="case-sim.html">case sim</a>
-    </nav>
-    <div class="live-badge"><div class="live-dot"></div>live</div>
-    <button class="refresh-btn" onclick="loadData()">↻ refresh</button>
+    <a href="guide.html" style="color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;text-decoration:none;border:1px solid var(--border);padding:5px 10px;border-radius:2px;transition:all 0.15s" onmouseover="this.style.color='var(--accent)';this.style.borderColor='var(--accent)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">price guide →</a>
+    <a href="heatmap.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">heat map →</a>
+    <a href="case-sim.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">case sim →</a>
+    <div class="live-badge"><span class="live-dot"></span> <span id="fetch-time">loading</span></div>
+    <button class="refresh-btn" onclick="loadData()">↺ refresh</button>
   </div>
 </header>
 
 <div class="page">
 
-  <div id="error-wrap"></div>
-
-  <!-- Stat cards -->
-  <div class="stats-grid">
-    <div class="stat-card"><div class="stat-label">Total Sales</div><div class="stat-value" id="stat-sales">—</div><div class="stat-sub">all-time verified</div></div>
-    <div class="stat-card"><div class="stat-label">Products Tracked</div><div class="stat-value" id="stat-products">—</div><div class="stat-sub">set · player · variant</div></div>
-    <div class="stat-card"><div class="stat-label">30d Volume</div><div class="stat-value" id="stat-30d">—</div><div class="stat-sub">sales last 30 days</div></div>
-    <div class="stat-card"><div class="stat-label">Avg Sale Price</div><div class="stat-value" id="stat-avg">—</div><div class="stat-sub">all-time across all variants</div></div>
+  <!-- Stats row -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card"><div class="stat-label">Avg Chase Value</div><div class="stat-value" id="stat-parallel">—</div><div class="stat-sub">last 30 days · non-base variants</div></div>
+    <div class="stat-card"><div class="stat-label">Total Sales (30 Days)</div><div class="stat-value" id="stat-weekly">—</div><div class="stat-sub">last 30 days · all variants</div></div>
+    <div class="stat-card"><div class="stat-label">Total Sales (All-Time)</div><div class="stat-value" id="stat-alltime">—</div><div class="stat-sub">all sets · all variants</div></div>
+    <div class="stat-card"><div class="stat-label">Products Tracked</div><div class="stat-value" id="stat-products">—</div><div class="stat-sub">all-time · set · player · variant</div></div>
   </div>
 
-  <!-- Variant averages -->
-  <div class="section-label">variant averages</div>
-  <div class="league-tabs" id="variant-league-tabs">
-    <button class="chip active" data-league="ALL"  onclick="switchVariantLeague(this)">All</button>
-    <button class="chip"        data-league="NBA"  onclick="switchVariantLeague(this)">NBA</button>
-    <button class="chip"        data-league="WNBA" onclick="switchVariantLeague(this)">WNBA</button>
-    <button class="chip"        data-league="MLB"  onclick="switchVariantLeague(this)">MLB</button>
-  </div>
-  <div class="panel" style="margin-bottom:32px">
-    <div id="variant-bars"><div class="loading-state"><span class="loading-spinner">◌</span>loading...</div></div>
-  </div>
-
-  <!-- Chart + Set×Variant table -->
+  <!-- Variant averages by league + Base price by player -->
   <div class="two-col">
-    <div>
-      <div class="section-label">sales volume · 12 months</div>
-      <div class="panel"><div class="chart-container"><canvas id="monthly-chart"></canvas></div></div>
-    </div>
-    <div>
-      <div class="section-label">avg price by set × variant</div>
-      <div class="panel" style="overflow-x:auto">
-        <div id="sv-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div>
+    <div class="panel">
+      <div class="panel-title">avg price by variant <span style="color:var(--muted);font-size:8px" id="league-variant-label">NBA</span></div>
+      <div class="filter-bar" style="margin-bottom:14px;margin-top:-4px">
+        <div class="filter-group" id="league-tabs">
+          <button class="chip active" data-league="NBA" onclick="switchLeagueTab(this)">NBA</button>
+          <button class="chip" data-league="WNBA" onclick="switchLeagueTab(this)">WNBA</button>
+          <button class="chip" data-league="MLB" onclick="switchLeagueTab(this)">MLB</button>
+          <button class="chip" data-league="ALL" onclick="switchLeagueTab(this)">ALL</button>
+        </div>
       </div>
+      <div id="variant-avgs"><div class="loading"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">avg base price by player <span style="color:var(--muted);font-size:8px">base variant only · all sets</span></div>
+      <div id="set-variant-table"><div class="loading"></div></div>
     </div>
   </div>
 
-  <!-- Movers + Top players -->
+  <!-- Price over time chart -->
   <div class="two-col">
-    <div>
-      <div class="section-label">biggest movers · last sale vs avg</div>
-      <div class="panel"><div id="movers-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
+    <div class="panel">
+      <div class="panel-title">avg parallel price over time <span style="color:var(--muted);font-size:8px">last 6 months · non-base · monthly</span></div>
+      <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
     </div>
-    <div>
-      <div class="section-label">top players by gold avg</div>
-      <div class="panel"><div id="top-players-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
-    </div>
-  </div>
-
-  <!-- Power rankings + Recent sales -->
-  <div class="two-col">
-    <div>
-      <div class="section-label">power rankings · relative multiplier</div>
-      <div class="league-tabs" id="power-league-tabs">
-        <button class="chip active" data-league="ALL"  onclick="switchPowerLeague(this)">All</button>
-        <button class="chip"        data-league="NBA"  onclick="switchPowerLeague(this)">NBA</button>
-        <button class="chip"        data-league="WNBA" onclick="switchPowerLeague(this)">WNBA</button>
-        <button class="chip"        data-league="MLB"  onclick="switchPowerLeague(this)">MLB</button>
-      </div>
-      <div class="panel"><div id="power-rankings"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
-    </div>
-    <div>
-      <div class="section-label">recent sales</div>
-      <div id="recent-sales"><div class="loading-state"><span class="loading-spinner">◌</span>loading...</div></div>
+    <div class="panel">
+      <div class="panel-title">avg sales per week <span style="color:var(--muted);font-size:8px">full weeks only</span></div>
+      <div id="variant-avgs-week"><div class="loading"></div></div>
     </div>
   </div>
 
-  <!-- Product grid -->
+  <!-- Recent sales feed -->
+  <div class="section-label">top sales · last 30 days <span id="recent-count" style="margin-left:8px;color:var(--muted2);font-size:9px;letter-spacing:1px;text-transform:none"></span></div>
+  <div class="sales-feed" id="recent-sales"><div class="loading" style="grid-column:1/-1"></div></div>
+
+
+  <!-- Power Rankings -->
+  <div class="panel" style="margin-bottom:24px">
+    <div class="panel-title">power rankings <span style="color:var(--muted);font-size:8px">variant-normalized score · top 20 players · all sets</span>
+      <span style="float:right;display:flex;gap:6px" id="power-league-tabs">
+        <button class="chip active" data-league="ALL" onclick="switchPowerLeague(this)" style="font-size:8px;padding:3px 8px">ALL</button>
+        <button class="chip" data-league="NBA" onclick="switchPowerLeague(this)" style="font-size:8px;padding:3px 8px">NBA</button>
+        <button class="chip" data-league="WNBA" onclick="switchPowerLeague(this)" style="font-size:8px;padding:3px 8px">WNBA</button>
+        <button class="chip" data-league="MLB" onclick="switchPowerLeague(this)" style="font-size:8px;padding:3px 8px">MLB</button>
+      </span>
+    </div>
+    <div id="power-rankings"><div class="loading"></div></div>
+  </div>
+
+  <!-- Movers + Top Players -->
+  <div class="two-col" style="margin-bottom:32px">
+    <div class="panel">
+      <div class="panel-title">biggest movers <span style="color:var(--muted);font-size:8px">last sale vs all-time avg · min 2 sales</span></div>
+      <div id="movers-table"><div class="loading"></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">top 10 players (gold) <span style="color:var(--muted);font-size:8px">by avg gold price · across all sets</span></div>
+      <div id="top-players-table"><div class="loading"></div></div>
+    </div>
+  </div>
+
+  <!-- Product cards -->
   <div class="section-label">all products</div>
+
   <div class="filter-bar">
-    <div class="filter-group"><span class="filter-label-sm">set</span><div id="set-chips" class="filter-group"></div></div>
-    <div class="filter-group" style="margin-left:16px"><span class="filter-label-sm">variant</span><div id="variant-chips" class="filter-group"></div></div>
+    <span class="filter-label-sm">Set</span>
+    <div class="filter-group" id="set-filters"></div>
+    <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+    <span class="filter-label-sm">Variant</span>
+    <div class="filter-group" id="variant-filters">
+      <button class="chip active" data-variant="all" onclick="filterVariant(this)">All</button>
+      <button class="chip" data-variant="Fire" onclick="filterVariant(this)">Fire</button>
+      <button class="chip" data-variant="Chrome" onclick="filterVariant(this)">Chrome</button>
+      <button class="chip" data-variant="Gold" onclick="filterVariant(this)">Gold</button>
+      <button class="chip" data-variant="Emerald" onclick="filterVariant(this)">Emerald</button>
+      <button class="chip" data-variant="Victory" onclick="filterVariant(this)">Victory</button>
+      <button class="chip" data-variant="Base" onclick="filterVariant(this)">Base</button>
+    </div>
     <div class="search-wrap">
       <span class="search-icon">⌕</span>
-      <input class="search-input" type="text" placeholder="search player..." oninput="onSearch(this.value)">
+      <input class="search-input" type="text" placeholder="Search player..." oninput="filterSearch(this.value)" id="search-input">
     </div>
   </div>
+
   <div class="products-grid" id="products-grid">
-    <div class="loading-state" style="grid-column:1/-1"><span class="loading-spinner">◌</span>loading...</div>
+    <div style="padding:40px;color:var(--muted);font-size:10px;letter-spacing:1px;grid-column:1/-1;text-align:center">loading market data...</div>
   </div>
 
 </div>
 
+<footer class="footer" id="footer">ghostladder market intel · internal use only · data sourced from eBay</footer>
+
 <script>
-const SB_URL='https://sabzbyuqrondoayhwoth.supabase.co';
-const SB_KEY='sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
-const SB_H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+// ─────────────────────────────────────────────────────────────────────────────
+// Supabase config
+// ─────────────────────────────────────────────────────────────────────────────
+const SB_URL = 'https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY = 'sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
 
-async function rpc(fn,p={}){const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:SB_H,body:JSON.stringify(p)});if(!r.ok)throw new Error(`${fn}: ${r.status}`);return r.json();}
+async function rpc(fn, p={}) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST',headers:SB_H,body:JSON.stringify(p)});
+  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
+  return r.json();
+}
 
-const VARIANT_ORDER=['Base','Victory','Vides','Emerald','Gold','Chrome','Fire','SP'];
-const VCOLORS={Fire:'#ff4d00',Chrome:'#a8c7fa',Gold:'#ffd700',Emerald:'#3ddc84',Vides:'#b47aff',Victory:'#ff9500',Base:'#888',SP:'#c084fc'};
+// Normalize PI row → product object (v1 field names)
+function normProduct(r) {
+  const setStr = (r.set_name || '').toUpperCase();
+  const league = setStr.includes('WNBA') ? 'WNBA' : setStr.includes('NBA') ? 'NBA' : setStr.includes('MLB') ? 'MLB' : '';
+  return {
+    set: r.set_name, player: r.player, variant: r.variant,
+    totalSales: +r.total_sales || 0, avgPrice: +r.avg_price || 0,
+    avg30d: +r.avg_30d || 0, sales30d: +r.sales_30d || 0,
+    avg90d: +r.avg_90d || 0, sales90d: +r.sales_90d || 0,
+    lastSaleDate: r.last_sale_date, lastSalePrice: +r.last_sale_price || 0,
+    retail: +r.retail_price || 0,
+    multiplier: (r.retail_price && r.avg_price) ? Math.round(+r.avg_price / +r.retail_price * 10) / 10 : 0,
+    league,
+  };
+}
 
-let allProducts=[],recentSales=[],activeSet='all',activeVariant='all',activeVarLeague='ALL',activePowerLeague='ALL',searchQuery='';
-let monthlyChart=null;
+// Normalize recent sale row
+function normSale(r) {
+  return {
+    set: r.set_name, player: r.player, variant: r.variant,
+    price: +r.price || 0, date: r.date,
+    image: r.image_url, url: r.ebay_url, afa: r.afa_grade,
+  };
+}
 
-async function loadData(){
-  try{
-    const[pi,sales]=await Promise.all([
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let allProducts = [];
+let allProductsData = []; // full unfiltered for league tabs
+let activeSet = 'all';
+let activeVariant = 'all';
+let searchQuery = '';
+let priceChart = null;
+let activeLeague = 'NBA';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fetch data
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadData() {
+  document.getElementById('fetch-time').textContent = 'fetching...';
+  try {
+    const [pi, sales] = await Promise.all([
       rpc('get_price_intelligence'),
-      rpc('get_recent_sales',{limit_rows:300}),
+      rpc('get_recent_sales', {limit_rows: 300}),
     ]);
-    allProducts=pi.filter(r=>r.player&&r.player!=='Unknown').map(r=>({
-      set:r.set_name,league:r.league||'',player:r.player,variant:r.variant,
-      totalSales:+r.total_sales||0,avgPrice:+r.avg_price||0,
-      lowPrice:+r.low_price||0,highPrice:+r.high_price||0,
-      avg30d:+r.avg_30d||0,sales30d:+r.sales_30d||0,
-      avg90d:+r.avg_90d||0,sales90d:+r.sales_90d||0,
-      lastSaleDate:r.last_sale_date||null,lastSalePrice:+r.last_sale_price||0,
-      retail:+r.retail_price||0,
-      multiplier:r.retail_price&&r.avg_price?Math.round(r.avg_price/r.retail_price*10)/10:0,
-    }));
-    recentSales=sales.filter(r=>r.player&&r.player!=='Unknown').map(r=>({
-      id:r.id,set:r.set_name,league:r.league||'',player:r.player,variant:r.variant,
-      price:+r.price||0,date:r.date,image:r.image_url,url:r.ebay_url,
-      afa:r.afa_grade,source:r.source,flagged:r.flagged,rowIndex:r.sheets_row_index,
-    }));
-    renderAll();
-  }catch(e){
-    document.getElementById('error-wrap').innerHTML=`<div class="error-banner">⚠ ${e.message}</div>`;
+    const cleanProducts = pi.filter(r => r.player && r.player !== 'Unknown').map(normProduct);
+    const cleanSales = sales.filter(r => r.player && r.player !== 'Unknown').map(normSale);
+    renderAllSB(cleanProducts, cleanSales);
+  } catch(e) {
+    console.error('FETCH FAILED:', e.message, e);
+    document.getElementById('fetch-time').textContent = 'fetch error: ' + e.message;
   }
 }
 
-function renderAll(){
-  renderStats();
-  renderVariantBars(activeVarLeague);
-  renderMonthlySalesChart();
-  renderSVTable();
-  renderMovers();
-  renderTopPlayers();
-  renderPowerRankings(activePowerLeague);
-  renderRecentSales();
-  buildChips();
+// ─────────────────────────────────────────────────────────────────────────────
+// Render everything
+// ─────────────────────────────────────────────────────────────────────────────
+function renderAllSB(products, sales) {
+  allProducts = products;
+  allProductsData = products;
+
+  renderStats({products, recentSales: sales});
+  renderSetFilters([...new Set(products.map(p => p.set).filter(Boolean))].sort());
+  renderVariantAverages([]);
+  renderMonthlySalesChart(sales, products);
+  renderSetVariantTable([]);
+  renderRecentSales(sales);
+  renderPriceChart(sales);
+  renderMovers(products);
+  renderTopPlayers(products);
+  renderPowerRankings(products, 'ALL');
+  renderProducts();
+
+  const allDates = sales.map(s => s.date ? new Date(s.date) : null).filter(Boolean);
+  if (allDates.length) {
+    const latestSale = new Date(Math.max(...allDates));
+    document.getElementById('fetch-time').textContent =
+      'last sale: ' + latestSale.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  } else {
+    document.getElementById('fetch-time').textContent = 'updated ' + new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stats
+// ─────────────────────────────────────────────────────────────────────────────
+function renderStats(data) {
+  const products = data.products || [];
+  const sales = data.recentSales || [];
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentValid = sales.filter(s => s.date && new Date(s.date) >= thirtyDaysAgo && s.price > 0);
+  const parallelPrices = recentValid.filter(s => s.variant && s.variant !== 'Base').map(s => s.price);
+  const parallelAvg = parallelPrices.length
+    ? Math.round(parallelPrices.reduce((a,b) => a+b, 0) / parallelPrices.length) : 0;
+  document.getElementById('stat-parallel').textContent = parallelAvg ? '$' + parallelAvg : '—';
+  document.getElementById('stat-weekly').textContent = recentValid.length || '—';
+  const allTimeSales = products.reduce((sum, p) => sum + (p.totalSales || 0), 0);
+  document.getElementById('stat-alltime').textContent = allTimeSales ? allTimeSales.toLocaleString() : '—';
+  document.getElementById('stat-products').textContent = products.length || '—';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Set filters
+// ─────────────────────────────────────────────────────────────────────────────
+function renderSetFilters(sets) {
+  const wrap = document.getElementById('set-filters');
+  wrap.innerHTML = '<button class="chip active" data-set="all" onclick="filterSet(this)">All</button>';
+  sets.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.dataset.set = s;
+    btn.textContent = s;
+    btn.onclick = () => filterSet(btn);
+    wrap.appendChild(btn);
+  });
+}
+
+function filterSet(btn) {
+  document.querySelectorAll('#set-filters .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeSet = btn.dataset.set;
   renderProducts();
 }
 
-function renderStats(){
-  const total=allProducts.reduce((s,p)=>s+p.totalSales,0);
-  const vol30=allProducts.reduce((s,p)=>s+p.sales30d,0);
-  const priced=allProducts.filter(p=>p.avgPrice>0);
-  const avg=priced.length?priced.reduce((s,p)=>s+p.avgPrice,0)/priced.length:0;
-  document.getElementById('stat-sales').textContent=total.toLocaleString();
-  document.getElementById('stat-products').textContent=allProducts.length.toLocaleString();
-  document.getElementById('stat-30d').textContent=vol30.toLocaleString();
-  document.getElementById('stat-avg').textContent=avg>0?'$'+Math.round(avg):'—';
+function filterVariant(btn) {
+  document.querySelectorAll('#variant-filters .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeVariant = btn.dataset.variant;
+  renderProducts();
 }
 
-function switchVariantLeague(btn){
-  document.querySelectorAll('#variant-league-tabs .chip').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activeVarLeague=btn.dataset.league; renderVariantBars(activeVarLeague);
+function filterSearch(q) {
+  searchQuery = q.toLowerCase();
+  renderProducts();
 }
 
-function renderVariantBars(league){
-  const f=league==='ALL'?allProducts:allProducts.filter(p=>leagueMatch(p,league));
-  const vm={};
-  f.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!vm[p.variant])vm[p.variant]={sum:0,cnt:0};vm[p.variant].sum+=p.avgPrice*p.totalSales;vm[p.variant].cnt+=p.totalSales;});
-  const ord=VARIANT_ORDER.filter(v=>vm[v]);
-  const maxV=Math.max(...ord.map(v=>vm[v].sum/vm[v].cnt));
-  document.getElementById('variant-bars').innerHTML=ord.length
-    ?`<div class="variant-bars">${ord.map(v=>{const avg=vm[v].sum/vm[v].cnt;const pct=Math.round(avg/maxV*100);const c=VCOLORS[v]||'#888';
-      return`<div class="vbar-row"><div class="vbar-label" style="color:${c}">${v}</div><div class="vbar-track"><div class="vbar-fill" style="width:${pct}%;background:${c}"></div></div><div class="vbar-val">$${Math.round(avg)}</div></div>`;
-    }).join('')}</div>`
-    :'<div class="empty">no data</div>';
+// ─────────────────────────────────────────────────────────────────────────────
+// Variant averages
+// ─────────────────────────────────────────────────────────────────────────────
+const VARIANT_COLORS = {
+  Fire: '#ff4040', Chrome: '#a0c4ff', Gold: '#ffd700',
+  Emerald: '#3ddc84', Victory: '#c084fc', Base: '#666'
+};
+
+function switchLeagueTab(btn) {
+  document.querySelectorAll('#league-tabs .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeLeague = btn.dataset.league;
+  document.getElementById('league-variant-label').textContent = activeLeague === 'ALL' ? 'all leagues' : activeLeague;
+  renderVariantAveragesByLeague(allProductsData, activeLeague);
 }
 
-function leagueMatch(p,league){const s=(p.league||p.set||'').toUpperCase();if(league==='NBA')return s.includes('NBA')&&!s.includes('WNBA');if(league==='WNBA')return s.includes('WNBA');if(league==='MLB')return s.includes('MLB');return true;}
-
-function renderMonthlySalesChart(){
-  const now=new Date();
-  const months=[];
-  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({label:d.toLocaleDateString('en-US',{month:'short'}),year:d.getFullYear(),month:d.getMonth(),count:0});}
-  recentSales.forEach(s=>{if(!s.date)return;const d=new Date(s.date);const m=months.find(x=>x.year===d.getFullYear()&&x.month===d.getMonth());if(m)m.count++;});
-  const ctx=document.getElementById('monthly-chart').getContext('2d');
-  if(monthlyChart)monthlyChart.destroy();
-  monthlyChart=new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.label),datasets:[{data:months.map(m=>m.count),backgroundColor:months.map((_,i)=>i===months.length-1?'#e8ff47':'rgba(232,255,71,0.25)'),borderRadius:1}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#161616',titleColor:'#e8ff47',bodyColor:'#999',callbacks:{label:c=>` ${c.raw} sales`}}},
-    scales:{x:{grid:{color:'#1e1e1e'},ticks:{color:'#666',font:{family:'DM Mono',size:9}}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#666',font:{family:'DM Mono',size:9}},beginAtZero:true}}}});
+function renderVariantAverages(avgs) {
+  // Called on initial load — render NBA by default using products data
+  renderVariantAveragesByLeague(allProductsData, 'NBA');
 }
 
-function renderSVTable(){
-  const sm={};
-  allProducts.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!sm[p.set])sm[p.set]={};if(!sm[p.set][p.variant])sm[p.set][p.variant]={sum:0,cnt:0};sm[p.set][p.variant].sum+=p.avgPrice*p.totalSales;sm[p.set][p.variant].cnt+=p.totalSales;});
-  const sets=Object.keys(sm);
-  const vars=VARIANT_ORDER.filter(v=>sets.some(s=>sm[s][v]));
-  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
-  document.getElementById('sv-table').innerHTML=`<table class="sv-table"><thead><tr><th>Set</th>${vars.map(v=>`<th style="color:${VCOLORS[v]||'#888'}">${v}</th>`).join('')}</tr></thead><tbody>${
-    sets.map(s=>`<tr><td>${shortSet(s)}</td>${vars.map(v=>sm[s][v]?`<td>$${Math.round(sm[s][v].sum/sm[s][v].cnt)}</td>`:`<td style="color:var(--muted2)">—</td>`).join('')}</tr>`).join('')
-  }</tbody></table>`;
+function renderVariantAveragesByLeague(products, league) {
+  const el = document.getElementById('variant-avgs');
+
+  // Filter products by league (or all)
+  const filtered = league === 'ALL'
+    ? products
+    : products.filter(p => p.league === league);
+
+  // Aggregate by variant
+  const vMap = {};
+  filtered.forEach(p => {
+    if (!p.avgPrice || !p.totalSales) return;
+    if (!vMap[p.variant]) vMap[p.variant] = { sum: 0, salesSum: 0 };
+    vMap[p.variant].sum += p.avgPrice * p.totalSales;
+    vMap[p.variant].salesSum += p.totalSales;
+  });
+
+  // Build avgs from whatever variants exist in the data — dynamic, not hardcoded
+  // Sort by avg price descending so rarest/most valuable appear first
+  const preferredOrder = ['Fire','Chrome','Gold','Emerald','Vides','Victory','SP','Base'];
+  const avgs = Object.entries(vMap)
+    .filter(([v, d]) => d.salesSum > 0)
+    .map(([v, d]) => ({
+      variant: v,
+      avgPrice: Math.round(d.sum / d.salesSum),
+      totalSales: d.salesSum,
+    }))
+    .sort((a, b) => {
+      const ai = preferredOrder.indexOf(a.variant);
+      const bi = preferredOrder.indexOf(b.variant);
+      // Known variants sort by preferred order, unknown ones sort by price desc
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return b.avgPrice - a.avgPrice;
+    });
+
+  if (!avgs.length) { el.innerHTML = '<div class="empty">no data for this league yet</div>'; return; }
+  const max = Math.max(...avgs.map(a => a.avgPrice));
+  el.innerHTML = avgs.map(a => `
+    <div class="variant-row">
+      <div class="variant-name" style="color:${VARIANT_COLORS[a.variant]||'#666'}">${a.variant}</div>
+      <div class="variant-bar-wrap">
+        <div class="variant-bar" style="width:${(a.avgPrice/max*100).toFixed(1)}%;background:${VARIANT_COLORS[a.variant]||'#666'}"></div>
+      </div>
+      <div class="variant-price">$${a.avgPrice}</div>
+      <div class="variant-count">${a.totalSales} sales</div>
+    </div>`).join('');
 }
 
-function renderMovers(){
-  const el=document.getElementById('movers-table');
-  const elig=allProducts.filter(p=>p.totalSales>=2&&p.lastSalePrice>0&&p.avgPrice>0);
-  if(!elig.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
-  const wc=elig.map(p=>({...p,change:p.lastSalePrice-p.avgPrice,changePct:(p.lastSalePrice-p.avgPrice)/p.avgPrice*100}));
-  wc.sort((a,b)=>Math.abs(b.changePct)-Math.abs(a.changePct));
-  const top=wc.slice(0,10);
-  const spark=(avg,last)=>{const mx=Math.max(avg,last);const h1=Math.round(avg/mx*18),h2=Math.round(last/mx*18);const c=last>=avg?'#3ddc84':'#ff4040';return`<span class="mover-spark"><span style="height:${h1}px;background:var(--muted)"></span><span style="height:${h2}px;background:${c}"></span></span>`;};
-  el.innerHTML=`<table class="movers-table"><thead><tr><th>Player</th><th>Variant</th><th>Avg → Last</th><th>Chg</th><th></th></tr></thead><tbody>${top.map(p=>{const up=p.change>=0;const vc='v-'+(p.variant||'base').toLowerCase();const sn=p.set.replace('Game Face','').trim();return`<tr><td><div class="mover-name">${p.player}</div><div style="font-size:8px;color:var(--muted)">${sn}</div></td><td><span class="product-card-variant ${vc}" style="font-size:8px;padding:1px 5px">${p.variant}</span></td><td style="font-size:10px">$${Math.round(p.avgPrice)} → $${Math.round(p.lastSalePrice)}</td><td class="${up?'mover-up':'mover-down'}">${up?'▲':'▼'} ${Math.abs(p.changePct).toFixed(0)}%</td><td>${spark(p.avgPrice,p.lastSalePrice)}</td></tr>`;}).join('')}</tbody></table>`;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Monthly sales volume chart
+// ─────────────────────────────────────────────────────────────────────────────
+let monthlyChart = null;
+function renderMonthlySalesChart(sales, products) {
+  const el = document.getElementById('variant-avgs-week');
+
+  // Get Monday of the current week — we exclude this partial week
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
+  const daysToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+  const thisWeekMonday = new Date(now);
+  thisWeekMonday.setHours(0,0,0,0);
+  thisWeekMonday.setDate(now.getDate() - daysToMonday);
+
+  // Group sales into full ISO weeks (Mon-Sun), excluding current partial week
+  const sixMonthsAgo = new Date(now - 180 * 24 * 60 * 60 * 1000);
+  const byWeek = {};
+  sales.forEach(s => {
+    if (!s.date) return;
+    const d = new Date(s.date);
+    if (d >= thisWeekMonday) return; // skip current partial week
+    if (d < sixMonthsAgo) return; // only last 6 months
+
+    // Get Monday of this sale's week
+    const day = d.getDay();
+    const diff = (day === 0 ? 6 : day - 1);
+    const monday = new Date(d);
+    monday.setHours(0,0,0,0);
+    monday.setDate(d.getDate() - diff);
+
+    const key = monday.toISOString().substring(0, 10);
+    const label = monday.toLocaleDateString('en-US', {month: 'short', day: 'numeric'});
+    if (!byWeek[key]) byWeek[key] = { label, count: 0 };
+    byWeek[key].count++;
+  });
+
+  const sorted = Object.entries(byWeek).sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty">not enough data yet</div>';
+    return;
+  }
+
+  el.innerHTML = '<div style="position:relative;height:200px"><canvas id="monthlyChart"></canvas></div>';
+  if (monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
+
+  const ctx = document.getElementById('monthlyChart').getContext('2d');
+  monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e => e[1].label),
+      datasets: [{
+        label: 'Sales',
+        data: sorted.map(e => e[1].count),
+        backgroundColor: 'rgba(232,255,71,0.3)',
+        borderColor: '#e8ff47',
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111',
+          borderColor: '#282828',
+          borderWidth: 1,
+          titleColor: '#666',
+          bodyColor: '#f0f0f0',
+          titleFont: { family: 'DM Mono', size: 10 },
+          bodyFont: { family: 'DM Mono', size: 12 },
+          callbacks: { label: ctx => ctx.parsed.y + ' sales' }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#161616' }, ticks: { color: '#444', font: { family: 'DM Mono', size: 9 } } },
+        y: { grid: { color: '#161616' }, ticks: { color: '#444', font: { family: 'DM Mono', size: 9 }, stepSize: 1 }, beginAtZero: true }
+      }
+    }
+  });
 }
 
-function renderTopPlayers(){
-  const el=document.getElementById('top-players-table');
-  const pm={};
-  allProducts.forEach(p=>{if(p.variant!=='Gold'||!p.avgPrice||!p.totalSales)return;if(!pm[p.player])pm[p.player]={sum:0,cnt:0};pm[p.player].sum+=p.avgPrice*p.totalSales;pm[p.player].cnt+=p.totalSales;});
-  const ranked=Object.entries(pm).map(([player,d])=>({player,avgPrice:Math.round(d.sum/d.cnt),totalSales:d.cnt})).filter(p=>p.avgPrice>0).sort((a,b)=>b.avgPrice-a.avgPrice).slice(0,10);
-  if(!ranked.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
-  const max=ranked[0].avgPrice;
-  el.innerHTML=`<table class="top-players-table"><thead><tr><th>#</th><th>Player</th><th>Avg Gold</th><th></th><th>Sales</th></tr></thead><tbody>${ranked.map((p,i)=>`<tr><td class="top-rank">${i+1}</td><td class="top-player-name">${p.player}</td><td class="top-player-price" style="color:#ffd700">$${p.avgPrice}</td><td><div class="top-player-bar-wrap"><div class="top-player-bar" style="width:${Math.round(p.avgPrice/max*100)}%;background:#ffd700"></div></div></td><td>${p.totalSales}</td></tr>`).join('')}</tbody></table>`;
+// ─────────────────────────────────────────────────────────────────────────────
+// Set+variant table
+// ─────────────────────────────────────────────────────────────────────────────
+let baseSortDir = 'desc'; // 'asc' or 'desc'
+
+function renderSetVariantTable(svAvgs) {
+  // Now shows base price by player — svAvgs param kept for compatibility but we use allProductsData
+  renderBasePriceByPlayer('price','desc');
 }
 
-function switchPowerLeague(btn){
-  document.querySelectorAll('#power-league-tabs .chip').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active'); activePowerLeague=btn.dataset.league; renderPowerRankings(activePowerLeague);
+// baseSortCol: 'price' or 'sales', baseSortDir: 'desc' or 'asc'
+let baseSortCol = 'price';
+
+function renderBasePriceByPlayer(sortCol, sortDir) {
+  const el = document.getElementById('set-variant-table');
+  if (sortCol) baseSortCol = sortCol;
+  if (sortDir) baseSortDir = sortDir;
+
+  // Aggregate base variant prices per player across all sets
+  const playerMap = {};
+  (allProductsData || []).filter(p => p.player && p.player !== 'Unknown').forEach(p => {
+    if (p.variant !== 'Base' || !p.avgPrice || !p.totalSales) return;
+    if (!playerMap[p.player]) playerMap[p.player] = { sum: 0, salesSum: 0 };
+    playerMap[p.player].sum += p.avgPrice * p.totalSales;
+    playerMap[p.player].salesSum += p.totalSales;
+  });
+
+  let rows = Object.entries(playerMap)
+    .map(([player, d]) => ({
+      player,
+      avgPrice: Math.round(d.sum / d.salesSum),
+      totalSales: d.salesSum,
+    }))
+    .filter(r => r.avgPrice > 0);
+
+  // Sort by selected column
+  rows.sort((a, b) => {
+    const aVal = baseSortCol === 'price' ? a.avgPrice : a.totalSales;
+    const bVal = baseSortCol === 'price' ? b.avgPrice : b.totalSales;
+    return baseSortDir === 'desc' ? bVal - aVal : aVal - bVal;
+  });
+  rows = rows.slice(0, 10);
+
+  if (!rows.length) { el.innerHTML = '<div class="empty">no base sales data yet</div>'; return; }
+
+  function sortHeader(col, label) {
+    const isActive = baseSortCol === col;
+    const nextDir = isActive && baseSortDir === 'desc' ? 'asc' : 'desc';
+    const arrow = isActive ? (baseSortDir === 'desc' ? ' ▼' : ' ▲') : '';
+    return `<th style="cursor:pointer;user-select:none" onclick="renderBasePriceByPlayer('${col}','${nextDir}')">${label}${arrow}</th>`;
+  }
+
+  el.innerHTML = `<table class="sv-table">
+    <thead><tr>
+      <th>Player</th>
+      ${sortHeader('price', 'Avg Base Price')}
+      ${sortHeader('sales', 'Sales')}
+    </tr></thead>
+    <tbody>${rows.map(r => {
+      const guideUrl = `guide.html?player=${encodeURIComponent(r.player)}`;
+      return `
+      <tr>
+        <td><a href="${guideUrl}" style="color:var(--accent);text-decoration:none;cursor:pointer" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.player}</a></td>
+        <td class="sv-price">$${r.avgPrice}</td>
+        <td>${r.totalSales}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
 }
 
-function renderPowerRankings(league){
-  const el=document.getElementById('power-rankings');
-  const f=league==='ALL'?allProducts:allProducts.filter(p=>leagueMatch(p,league));
-  const vp={};f.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!vp[p.variant])vp[p.variant]=[];vp[p.variant].push(p.avgPrice);});
-  const vm={};Object.entries(vp).forEach(([v,prices])=>{const s=[...prices].sort((a,b)=>a-b);const mid=Math.floor(s.length/2);vm[v]=s.length%2!==0?s[mid]:(s[mid-1]+s[mid])/2;});
-  const pm={};f.forEach(p=>{if(!p.avgPrice||!p.totalSales||!vm[p.variant])return;const mult=p.avgPrice/vm[p.variant];if(!pm[p.player])pm[p.player]={mults:[],sets:new Set(),sales:0};pm[p.player].mults.push(mult);pm[p.player].sets.add(p.set);pm[p.player].sales+=p.totalSales;});
-  const ranked=Object.entries(pm).map(([player,d])=>({player,score:d.mults.reduce((a,b)=>a+b,0)/d.mults.length,sets:[...d.sets],sales:d.sales})).filter(p=>p.score>0).sort((a,b)=>b.score-a.score).slice(0,20);
-  if(!ranked.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
-  const mx=ranked[0].score;
-  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
-  el.innerHTML=`<div class="power-grid">${ranked.map((p,i)=>{const pct=Math.round(p.score/mx*100);const sl=p.sets.length===1?shortSet(p.sets[0]):p.sets.length+' sets';return`<div class="power-row"><div class="power-rank ${i<3?'top3':''}">${i+1}</div><div class="power-info"><div class="power-name">${p.player}</div><div class="power-meta">${sl} · ${p.sales} sales</div></div><div class="power-score-wrap"><div class="power-score">${p.score.toFixed(2)}x</div><div class="power-bar-bg"><div class="power-bar-fill" style="width:${pct}%"></div></div></div></div>`;}).join('')}</div>`;
+// ─────────────────────────────────────────────────────────────────────────────
+// Recent sales
+// ─────────────────────────────────────────────────────────────────────────────
+function renderRecentSales(sales) {
+  const el = document.getElementById('recent-sales');
+  const countEl = document.getElementById('recent-count');
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const filtered = sales
+    .filter(s => s.player && s.player !== 'Unknown' && s.date && new Date(s.date) >= thirtyDaysAgo && s.price > 0)
+    .sort((a, b) => b.price - a.price);
+  if (!filtered.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1">no sales in the last 30 days</div>';
+    countEl.textContent = '';
+    return;
+  }
+  countEl.textContent = filtered.length + ' sales · sorted highest to lowest';
+  el.innerHTML = filtered.map(s => {
+    const d = s.date ? new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    const vClass = 'v-' + (s.variant||'base').toLowerCase();
+    const imgEl = s.image
+      ? `<img class="sale-card-img" src="${s.image}" alt="${s.player}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        + `<div class="sale-card-img-placeholder" style="display:none">👻</div>`
+      : `<div class="sale-card-img-placeholder">👻</div>`;
+    const ebayUrl = s.url || '#';
+    return `<div class="sale-card" onclick="window.open('${ebayUrl}','_blank')">
+      ${imgEl}
+      <div class="sale-card-body">
+        <div class="sale-card-player">${s.player}</div>
+        <div class="sale-card-set">${s.set}</div>
+        <div class="sale-card-price">$${s.price?.toFixed(0)||'—'}</div>
+        <span class="sale-card-variant ${vClass}">${s.variant}</span>
+        <div class="sale-card-date">${d}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
-function renderRecentSales(){
-  const el=document.getElementById('recent-sales');
-  const top=recentSales.slice(0,20);
-  if(!top.length){el.innerHTML='<div class="empty">no recent sales</div>';return;}
-  el.innerHTML=`<div class="sales-list">${top.map(s=>{const ds=s.date?new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';const vc='v-'+(s.variant||'base').toLowerCase();const sn=s.set.replace('Game Face','').trim();const img=s.image?`<img class="sale-img" src="${s.image}" loading="lazy" onerror="this.style.opacity='0'">`:`<div class="sale-img" style="display:flex;align-items:center;justify-content:center;font-size:14px;opacity:0.3">👻</div>`;return`<div class="sale-row">${img}<div class="sale-info"><div class="sale-player">${s.player}</div><div class="sale-meta"><span class="product-card-variant ${vc}" style="font-size:7px;padding:1px 5px;margin-right:5px">${s.variant}</span>${sn}</div></div><div class="sale-price">$${Math.round(s.price)}</div><div class="sale-date">${ds}</div></div>`;}).join('')}</div>`;
+// ─────────────────────────────────────────────────────────────────────────────
+// Price chart
+// ─────────────────────────────────────────────────────────────────────────────
+function renderPriceChart(sales) {
+  if (priceChart) { priceChart.destroy(); priceChart = null; }
+
+  // Filter to parallels only (non-base) and last 6 months
+  const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  const parallelSales = sales.filter(s =>
+    s.variant && s.variant !== 'Base' &&
+    s.player && s.player !== 'Unknown' &&
+    s.date && new Date(s.date) >= sixMonthsAgo &&
+    s.price > 0
+  );
+
+  // Group by month
+  const byMonth = {};
+  parallelSales.forEach(s => {
+    const d = new Date(s.date);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    const label = d.toLocaleDateString('en-US', {month:'short', year:'numeric'});
+    if (!byMonth[key]) byMonth[key] = { label, prices: [] };
+    byMonth[key].prices.push(s.price);
+  });
+
+  const sorted = Object.entries(byMonth)
+    .sort((a,b) => a[0].localeCompare(b[0]));
+
+  if (!sorted.length) return;
+
+  const labels = sorted.map(e => e[1].label);
+  const avgs   = sorted.map(e => {
+    const p = e[1].prices;
+    return Math.round(p.reduce((a,b) => a+b, 0) / p.length);
+  });
+
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  priceChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Avg Sale Price',
+        data: avgs,
+        borderColor: '#e8ff47',
+        backgroundColor: 'rgba(232,255,71,0.05)',
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#e8ff47',
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111',
+          borderColor: '#282828',
+          borderWidth: 1,
+          titleColor: '#666',
+          bodyColor: '#f0f0f0',
+          titleFont: { family: 'DM Mono', size: 10 },
+          bodyFont: { family: 'DM Mono', size: 12 },
+          callbacks: { label: ctx => '$' + Math.round(ctx.parsed.y) }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#161616' }, ticks: { color: '#444', font: { family: 'DM Mono', size: 9 } } },
+        y: { grid: { color: '#161616' }, ticks: { color: '#444', font: { family: 'DM Mono', size: 9 }, callback: v => '$'+Math.round(v) } }
+      }
+    }
+  });
 }
 
-function buildChips(){
-  const sets=[...new Set(allProducts.map(p=>p.set))].sort();
-  const vars=VARIANT_ORDER.filter(v=>allProducts.some(p=>p.variant===v));
-  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
-  document.getElementById('set-chips').innerHTML=`<button class="chip ${activeSet==='all'?'active':''}" onclick="filterSet('all')">All</button>`+sets.map(s=>`<button class="chip ${activeSet===s?'active':''}" onclick="filterSet(${JSON.stringify(s)})">${shortSet(s)}</button>`).join('');
-  document.getElementById('variant-chips').innerHTML=`<button class="chip ${activeVariant==='all'?'active':''}" onclick="filterVariant('all')">All</button>`+vars.map(v=>`<button class="chip ${activeVariant===v?'active':''}" style="${activeVariant===v?'':'color:'+VCOLORS[v]}" onclick="filterVariant(${JSON.stringify(v)})">${v}</button>`).join('');
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Power Rankings
+// ─────────────────────────────────────────────────────────────────────────────
+let activePowerLeague = 'ALL';
+
+function switchPowerLeague(btn) {
+  document.querySelectorAll('#power-league-tabs .chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activePowerLeague = btn.dataset.league;
+  renderPowerRankings(allProductsData, activePowerLeague);
 }
 
-function filterSet(s){activeSet=s;buildChips();renderProducts();}
-function filterVariant(v){activeVariant=v;buildChips();renderProducts();}
-function onSearch(q){searchQuery=q.toLowerCase().trim();renderProducts();}
+function renderPowerRankings(products, league) {
+  const el = document.getElementById('power-rankings');
 
-function renderProducts(){
-  let f=allProducts;
-  if(activeSet!=='all')f=f.filter(p=>p.set===activeSet);
-  if(activeVariant!=='all')f=f.filter(p=>p.variant===activeVariant);
-  if(searchQuery)f=f.filter(p=>p.player.toLowerCase().includes(searchQuery));
-  f.sort((a,b)=>(b.avgPrice||0)-(a.avgPrice||0));
-  const grid=document.getElementById('products-grid');
-  if(!f.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1">no products match these filters</div>';return;}
-  grid.innerHTML=f.map(p=>{const vc='v-'+(p.variant||'base').toLowerCase();const mult=p.multiplier>0?p.multiplier.toFixed(1)+'x':'';const ls=p.lastSaleDate?new Date(p.lastSaleDate).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';return`<div class="product-card" onclick="location.href='guide.html'">${mult?`<div class="mult-badge">${mult}</div>`:''}<div class="product-card-set">${p.set}</div><div class="product-card-player">${p.player}</div><span class="product-card-variant ${vc}">${p.variant}</span><div class="product-card-price">${p.avgPrice?'$'+Math.round(p.avgPrice):'—'}</div><div class="product-card-sub"><div class="product-card-meta"># sales <span>${p.totalSales||0}</span></div><div class="product-card-meta">last <span>${ls}</span></div>${p.retail?`<div class="product-card-meta">retail <span>$${Math.round(p.retail)}</span></div>`:''}</div></div>`;}).join('');
+  // Filter by league, exclude Unknown players
+  const filtered = (league === 'ALL' ? products : products.filter(p => p.league === league))
+    .filter(p => p.player && p.player !== 'Unknown');
+
+  // Step 1: compute median price per variant across all players (baseline)
+  const variantPrices = {};
+  filtered.forEach(p => {
+    if (!p.avgPrice || !p.totalSales) return;
+    if (!variantPrices[p.variant]) variantPrices[p.variant] = [];
+    variantPrices[p.variant].push(p.avgPrice);
+  });
+
+  const variantMedians = {};
+  Object.entries(variantPrices).forEach(([v, prices]) => {
+    const sorted = [...prices].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    variantMedians[v] = sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  });
+
+  // Step 2: for each player, compute avg multiplier across all variants they have
+  const playerMap = {};
+  filtered.forEach(p => {
+    if (!p.avgPrice || !p.totalSales || !variantMedians[p.variant]) return;
+    const multiplier = p.avgPrice / variantMedians[p.variant];
+    if (!playerMap[p.player]) playerMap[p.player] = { multipliers: [], sets: new Set(), sales: 0 };
+    playerMap[p.player].multipliers.push(multiplier);
+    playerMap[p.player].sets.add(p.set);
+    playerMap[p.player].sales += p.totalSales;
+  });
+
+  // Step 3: score = mean of multipliers, rank top 20
+  const ranked = Object.entries(playerMap)
+    .map(([player, d]) => ({
+      player,
+      score: d.multipliers.reduce((a, b) => a + b, 0) / d.multipliers.length,
+      variants: d.multipliers.length,
+      sets: [...d.sets],
+      sales: d.sales,
+    }))
+    .filter(p => p.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20);
+
+  if (!ranked.length) { el.innerHTML = '<div class="empty">not enough data yet</div>'; return; }
+
+  const maxScore = ranked[0].score;
+
+  el.innerHTML = `<div class="power-grid">${ranked.map((p, i) => {
+    const pct = Math.round((p.score / maxScore) * 100);
+    const isTop3 = i < 3;
+    const scoreDisplay = p.score.toFixed(2) + 'x';
+    const league = p.sets.length === 1
+      ? p.sets[0].replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim()
+      : p.sets.length + ' sets';
+    return `<div class="power-row">
+      <div class="power-rank ${isTop3 ? 'top3' : ''}">${i + 1}</div>
+      <div class="power-info">
+        <div class="power-name">${p.player}</div>
+        <div class="power-meta">${league} · ${p.sales} sales</div>
+      </div>
+      <div class="power-score-wrap">
+        <div class="power-score">${scoreDisplay}</div>
+        <div class="power-bar-bg"><div class="power-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
 }
 
-loadData();
+// ─────────────────────────────────────────────────────────────────────────────
+// Biggest movers
+// ─────────────────────────────────────────────────────────────────────────────
+function renderMovers(products) {
+  const el = document.getElementById('movers-table');
+
+  // Only products with 2+ sales, a last sale price, and an avg price — exclude Unknown
+  const eligible = products.filter(p =>
+    p.totalSales >= 2 && p.lastSalePrice > 0 && p.avgPrice > 0 &&
+    p.player && p.player !== 'Unknown'
+  );
+
+  if (!eligible.length) { el.innerHTML = '<div class="empty">not enough data yet</div>'; return; }
+
+  // Calculate change: last sale vs all-time avg
+  const withChange = eligible.map(p => ({
+    ...p,
+    change: p.lastSalePrice - p.avgPrice,
+    changePct: ((p.lastSalePrice - p.avgPrice) / p.avgPrice) * 100,
+  }));
+
+  // Sort by absolute % change, take top 10
+  withChange.sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct));
+  const top = withChange.slice(0, 10);
+
+  // Build sparkline from last/avg (simple 2-bar version)
+  function spark(avg, last) {
+    const max = Math.max(avg, last);
+    const h1 = Math.round((avg / max) * 18);
+    const h2 = Math.round((last / max) * 18);
+    const c2 = last >= avg ? '#3ddc84' : '#ff4040';
+    return `<span class="mover-spark">
+      <span style="height:${h1}px;background:var(--muted)"></span>
+      <span style="height:${h2}px;background:${c2}"></span>
+    </span>`;
+  }
+
+  el.innerHTML = `<table class="movers-table">
+    <thead><tr>
+      <th>Player</th><th>Variant</th><th>Avg → Last</th><th>Change</th><th></th>
+    </tr></thead>
+    <tbody>${top.map(p => {
+      const up = p.change >= 0;
+      const cls = up ? 'mover-up' : 'mover-down';
+      const arrow = up ? '▲' : '▼';
+      const vClass = 'v-' + (p.variant||'base').toLowerCase();
+      return `<tr>
+        <td>
+          <div class="mover-name">${p.player}</div>
+          <div style="font-size:8px;color:var(--muted);letter-spacing:1px">${p.set}</div>
+        </td>
+        <td><span class="product-card-variant ${vClass}" style="font-size:8px;padding:1px 5px">${p.variant}</span></td>
+        <td style="font-size:10px">$${Math.round(p.avgPrice)} → <span style="color:var(--text)">$${Math.round(p.lastSalePrice)}</span></td>
+        <td class="${cls}">${arrow} ${Math.abs(p.changePct).toFixed(0)}%</td>
+        <td>${spark(p.avgPrice, p.lastSalePrice)}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Top 10 players by avg parallel price
+// ─────────────────────────────────────────────────────────────────────────────
+function renderTopPlayers(products) {
+  const el = document.getElementById('top-players-table');
+
+  // Gold variant only, aggregate per player across all sets — exclude Unknown
+  const playerMap = {};
+  products.filter(p => p.player && p.player !== 'Unknown').forEach(p => {
+    if (p.variant !== 'Gold' || !p.avgPrice || !p.totalSales) return;
+    if (!playerMap[p.player]) playerMap[p.player] = { sum: 0, salesSum: 0 };
+    playerMap[p.player].sum += p.avgPrice * p.totalSales;
+    playerMap[p.player].salesSum += p.totalSales;
+  });
+
+  const ranked = Object.entries(playerMap)
+    .map(([player, d]) => ({
+      player,
+      avgPrice: Math.round(d.sum / d.salesSum),
+      totalSales: d.salesSum,
+    }))
+    .filter(p => p.avgPrice > 0)
+    .sort((a, b) => b.avgPrice - a.avgPrice)
+    .slice(0, 10);
+
+  if (!ranked.length) { el.innerHTML = '<div class="empty">not enough data yet</div>'; return; }
+
+  const max = ranked[0].avgPrice;
+
+  el.innerHTML = `<table class="top-players-table">
+    <thead><tr>
+      <th>#</th><th>Player</th><th>Avg Gold</th><th style="width:80px"></th><th>Sales</th>
+    </tr></thead>
+    <tbody>${ranked.map((p, i) => `<tr>
+      <td class="top-rank">${i + 1}</td>
+      <td class="top-player-name">${p.player}</td>
+      <td class="top-player-price" style="color:#ffd700">$${p.avgPrice}</td>
+      <td><div class="top-player-bar-wrap"><div class="top-player-bar" style="width:${Math.round(p.avgPrice/max*100)}%;background:#ffd700"></div></div></td>
+      <td>${p.totalSales}</td>
+    </tr>`).join('')}
+    </tbody></table>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Product cards
+// ─────────────────────────────────────────────────────────────────────────────
+function renderProducts() {
+  const grid = document.getElementById('products-grid');
+  let filtered = allProducts;
+
+  if (activeSet !== 'all') filtered = filtered.filter(p => p.set === activeSet);
+  if (activeVariant !== 'all') filtered = filtered.filter(p => p.variant === activeVariant);
+  if (searchQuery) filtered = filtered.filter(p => p.player.toLowerCase().includes(searchQuery));
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1">no products match these filters</div>';
+    return;
+  }
+
+  // Sort by avg price desc
+  filtered.sort((a,b) => (b.avgPrice||0) - (a.avgPrice||0));
+
+  grid.innerHTML = filtered.map(p => {
+    const vClass = 'v-' + (p.variant||'base').toLowerCase();
+    const mult = p.multiplier > 0 ? p.multiplier.toFixed(1) + 'x' : '';
+    const lastSale = p.lastSaleDate
+      ? new Date(p.lastSaleDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      : '—';
+    return `
+    <div class="product-card" onclick="window.location='guide.html?player=${encodeURIComponent(p.player)}'">
+      ${mult ? `<div class="mult-badge">${mult}</div>` : ''}
+      <div class="product-card-set">${p.set}</div>
+      <div class="product-card-player">${p.player}</div>
+      <span class="product-card-variant ${vClass}">${p.variant}${p.edition ? ' ' + p.edition : ''}</span>
+      <div class="product-card-price">${p.avgPrice ? '$'+Math.round(p.avgPrice) : '—'}</div>
+      <div class="product-card-sub">
+        <div class="product-card-meta"># sales <span>${p.totalSales||0}</span></div>
+        <div class="product-card-meta">last <span>${lastSale}</span></div>
+        ${p.retail ? `<div class="product-card-meta">retail <span>$${Math.round(p.retail)}</span></div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Init
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', loadData);
+} else {
+  loadData();
+}
 </script>
 </body>
 </html>
