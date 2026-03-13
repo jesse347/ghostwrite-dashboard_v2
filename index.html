@@ -755,6 +755,13 @@ async function rpc(fn, p={}) {
   if (!r.ok) throw new Error(`${fn}: ${r.status}`);
   return r.json();
 }
+// Parse a YYYY-MM-DD date string in local time (avoids UTC midnight rollback)
+function parseDate(str) {
+  if (!str) return null;
+  // Append local midnight so JS doesn't interpret as UTC
+  const d = new Date(str + 'T00:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
 
 // Normalize PI row → product object (v1 field names)
 function normProduct(r) {
@@ -830,7 +837,7 @@ function renderAllSB(products, sales) {
   renderPowerRankings(products, 'ALL');
   renderProducts();
 
-  const allDates = sales.map(s => s.date ? new Date(s.date) : null).filter(Boolean);
+  const allDates = sales.map(s => s.date ? parseDate(s.date) : null).filter(Boolean);
   if (allDates.length) {
     const latestSale = new Date(Math.max(...allDates));
     document.getElementById('fetch-time').textContent =
@@ -847,7 +854,7 @@ function renderStats(data) {
   const products = data.products || [];
   const sales = data.recentSales || [];
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const recentValid = sales.filter(s => s.date && new Date(s.date) >= thirtyDaysAgo && s.price > 0);
+  const recentValid = sales.filter(s => s.date && parseDate(s.date) >= thirtyDaysAgo && s.price > 0);
   const parallelPrices = recentValid.filter(s => s.variant && s.variant !== 'Base').map(s => s.price);
   const parallelAvg = parallelPrices.length
     ? Math.round(parallelPrices.reduce((a,b) => a+b, 0) / parallelPrices.length) : 0;
@@ -985,7 +992,7 @@ function renderMonthlySalesChart(sales, products) {
   const byWeek = {};
   sales.forEach(s => {
     if (!s.date) return;
-    const d = new Date(s.date);
+    const d = parseDate(s.date);
     if (d >= thisWeekMonday) return; // skip current partial week
     if (d < sixMonthsAgo) return; // only last 6 months
 
@@ -1128,7 +1135,7 @@ function renderRecentSales(sales) {
   const countEl = document.getElementById('recent-count');
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const filtered = sales
-    .filter(s => s.player && s.player !== 'Unknown' && s.date && new Date(s.date) >= thirtyDaysAgo && s.price > 0)
+    .filter(s => s.player && s.player !== 'Unknown' && s.date && parseDate(s.date) >= thirtyDaysAgo && s.price > 0)
     .sort((a, b) => b.price - a.price);
   if (!filtered.length) {
     el.innerHTML = '<div class="empty" style="grid-column:1/-1">no sales in the last 30 days</div>';
@@ -1137,7 +1144,7 @@ function renderRecentSales(sales) {
   }
   countEl.textContent = filtered.length + ' sales · sorted highest to lowest';
   el.innerHTML = filtered.map(s => {
-    const d = s.date ? new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
+    const d = s.date ? parseDate(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
     const vClass = 'v-' + (s.variant||'base').toLowerCase();
     const imgEl = s.image
       ? `<img class="sale-card-img" src="${s.image}" alt="${s.player}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
@@ -1168,14 +1175,14 @@ function renderPriceChart(sales) {
   const parallelSales = sales.filter(s =>
     s.variant && s.variant !== 'Base' &&
     s.player && s.player !== 'Unknown' &&
-    s.date && new Date(s.date) >= sixMonthsAgo &&
+    s.date && parseDate(s.date) >= sixMonthsAgo &&
     s.price > 0
   );
 
   // Group by month
   const byMonth = {};
   parallelSales.forEach(s => {
-    const d = new Date(s.date);
+    const d = parseDate(s.date);
     const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
     const label = d.toLocaleDateString('en-US', {month:'short', year:'numeric'});
     if (!byMonth[key]) byMonth[key] = { label, prices: [] };
@@ -1447,7 +1454,7 @@ function renderProducts() {
     const vClass = 'v-' + (p.variant||'base').toLowerCase();
     const mult = p.multiplier > 0 ? p.multiplier.toFixed(1) + 'x' : '';
     const lastSale = p.lastSaleDate
-      ? new Date(p.lastSaleDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})
+      ? parseDate(p.lastSaleDate).toLocaleDateString('en-US',{month:'short',day:'numeric'})
       : '—';
     return `
     <div class="product-card" onclick="window.location='guide.html?player=${encodeURIComponent(p.player)}'">

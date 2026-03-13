@@ -286,6 +286,13 @@ async function rpc(fn, p={}) {
   if (!r.ok) throw new Error(`${fn}: ${r.status}`);
   return r.json();
 }
+// Parse a YYYY-MM-DD date string in local time (avoids UTC midnight rollback)
+function parseDate(str) {
+  if (!str) return null;
+  // Append local midnight so JS doesn't interpret as UTC
+  const d = new Date(str + 'T00:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
 
 const SET_CONFIG = [
   { match: ['nba', 'game face', '2024'],  casePrice: 500, casePack: 12, hitRatio: 1.02, label: 'NBA 2024–25'  },
@@ -862,7 +869,7 @@ function renderSalesBody(pull) {
   const rd = pull.realData;
   const listings = (allData.allListings||[])
     .filter(l => l.set===activeSet && l.player===pull.player && l.variant===pull.variant)
-    .sort((a,b) => new Date(b.date)-new Date(a.date));
+    .sort((a,b) => parseDate(b.date)-parseDate(a.date));
   const dp = bestPriceSim(rd)||rd?.avgPrice||0;
   const sl = rd?.sales30d ? `${rd.sales30d} sales in last 30d · ${rd.totalSales||0} all-time` : `${rd?.totalSales||0} total sales`;
 
@@ -882,7 +889,7 @@ function renderSalesBody(pull) {
     <div class="d-section">
       <div class="d-section-title">Recent sales (${listings.length})</div>
       ${listings.length ? listings.slice(0,20).map(l => {
-        const ds = l.date ? new Date(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) : '—';
+        const ds = l.date ? parseDate(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) : '—';
         const img = l.image
           ? `<img class="listing-img" src="${l.image}" alt="" loading="lazy" onerror="this.style.display='none'">`
           : `<div class="listing-img-ph">👻</div>`;
