@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ghostladder · case forecast</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@300;400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080808;
+  --s1: #0d0d0d;
+  --s2: #141414;
+  --s3: #1c1c1c;
+  --border: #1f1f1f;
+  --border2: #2a2a2a;
+  --accent: #e8ff47;
+  --accent-dim: rgba(232,255,71,0.08);
+  --text: #efefef;
+  --muted: #555;
+  --muted2: #383838;
+  --mono: 'Space Mono', monospace;
+  --display: 'Unbounded', sans-serif;
+  --green: #3ddc84;
+  --red: #ff4455;
+
+  /* Confidence interval colors */
+  --ci-90: rgba(232,255,71,0.04);
+  --ci-50: rgba(232,255,71,0.09);
+
+  /* Bin colors by data quality */
+  --bin-real:    #e8ff47;
+  --bin-mixed:   #ffb347;
+  --bin-est:     #7c6fff;
+
+  /* Variant colors */
+  --fire:    #ff2d2d;
+  --chrome:  #a8c8ff;
+  --gold:    #ffd700;
+  --emerald: #2ecc71;
+  --victory: #e8ff47;
+  --base:    #444;
+  --sp:      #c084fc;
+  --vides:   #ff9f43;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); min-height: 100vh; }
+body { color: var(--text); font-family: var(--mono); font-size: 12px; overflow-x: hidden; }
+
+/* ── Grain overlay ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999;
+}
+
+/* ── Nav ── */
+.nav {
+  display: flex; align-items: center;
+  padding: 14px 32px; border-bottom: 1px solid var(--border);
+  gap: 24px; position: sticky; top: 0; background: rgba(8,8,8,0.95);
+  backdrop-filter: blur(12px); z-index: 50;
+}
+.nav-logo { font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-decoration: none; }
+.nav-links { display: flex; gap: 20px; margin-left: auto; }
+.nav-link { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); text-decoration: none; transition: color 0.15s; }
+.nav-link:hover, .nav-link.active { color: var(--text); }
+
+/* ── Page ── */
+.page { max-width: 1200px; margin: 0 auto; padding: 40px 32px; }
+
+.page-header { margin-bottom: 36px; }
+.page-eyebrow { font-size: 8px; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.page-title { font-family: var(--display); font-size: 32px; font-weight: 900; letter-spacing: -1.5px; line-height: 1; margin-bottom: 8px; }
+.page-title em { color: var(--accent); font-style: normal; }
+.page-sub { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); line-height: 1.8; }
+
+/* ── Set selector ── */
+.set-selector { display: flex; gap: 6px; margin-bottom: 32px; flex-wrap: wrap; }
+.set-btn {
+  font-family: var(--display); font-size: 8px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 8px 18px; cursor: pointer;
+  background: var(--s2); border: 1px solid var(--border2);
+  color: var(--muted); transition: all 0.15s;
+}
+.set-btn:hover { color: var(--text); border-color: var(--muted); }
+.set-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+/* ── Stats row ── */
+.stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 32px; }
+.stat-card { background: var(--s1); padding: 18px 20px; }
+.stat-label { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+.stat-value { font-family: var(--display); font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+.stat-value.accent { color: var(--accent); }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.gold { color: var(--gold); }
+.stat-sub { font-size: 8px; color: var(--muted); margin-top: 4px; }
+
+/* ── Forecast panel ── */
+.forecast-panel { background: var(--s1); border: 1px solid var(--border); margin-bottom: 24px; }
+.forecast-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 18px; border-bottom: 1px solid var(--border);
+  gap: 16px; flex-wrap: wrap;
+}
+.forecast-title { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.forecast-controls { display: flex; gap: 8px; align-items: center; }
+
+.run-btn {
+  font-family: var(--display); font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 28px; cursor: pointer;
+  background: var(--accent); color: #000; border: none; transition: all 0.15s;
+  position: relative; overflow: hidden;
+}
+.run-btn::after {
+  content: ''; position: absolute; inset: 0;
+  background: white; opacity: 0; transition: opacity 0.15s;
+}
+.run-btn:hover::after { opacity: 0.15; }
+.run-btn:disabled { background: var(--s3); color: var(--muted); cursor: not-allowed; }
+.run-btn:disabled::after { display: none; }
+
+.reset-btn {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1px;
+  padding: 10px 16px; cursor: pointer;
+  background: transparent; color: var(--muted); border: 1px solid var(--border2); transition: all 0.15s;
+}
+.reset-btn:hover { color: var(--text); border-color: var(--muted); }
+
+.n-label { font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+
+/* ── Distribution chart area ── */
+.chart-area { padding: 28px 24px 20px; position: relative; min-height: 280px; }
+.chart-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 220px; gap: 12px;
+}
+.chart-empty-icon { font-size: 32px; opacity: 0.08; }
+.chart-empty-text { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+
+/* SVG chart */
+.dist-svg { width: 100%; overflow: visible; display: block; }
+
+/* ── Legend ── */
+.chart-legend {
+  display: flex; gap: 20px; padding: 0 24px 20px; flex-wrap: wrap; align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 1px; flex-shrink: 0; }
+.legend-divider { width: 1px; height: 14px; background: var(--border2); }
+
+/* ── Selected sim summary ── */
+.sim-summary {
+  border-top: 1px solid var(--border); padding: 16px 24px;
+  display: none; align-items: center; gap: 32px; flex-wrap: wrap;
+}
+.sim-summary.visible { display: flex; }
+.sim-sum-label { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.sim-sum-val { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.sim-sum-val.green { color: var(--green); }
+.sim-sum-val.red { color: var(--red); }
+.sim-sum-note { font-size: 8px; color: var(--muted); margin-left: auto; line-height: 1.7; text-align: right; }
+.sim-select-hint { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 10px 0; }
+
+/* ── Case grid ── */
+.case-section { background: var(--s1); border: 1px solid var(--border); margin-bottom: 24px; }
+.case-section-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.case-section-title { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.case-section-meta { font-size: 8px; color: var(--muted2); }
+.case-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; padding: 20px; }
+
+.box-slot {
+  aspect-ratio: 1;
+  background: var(--s2); border: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 8px; position: relative;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: default;
+}
+.box-slot.is-hit { cursor: pointer; }
+.box-slot.is-hit:hover { filter: brightness(1.1); }
+.box-slot.populated { animation: pop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes pop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+.box-slot.is-fire    { border-color: var(--fire);    background: rgba(255,45,45,0.07); }
+.box-slot.is-chrome  { border-color: var(--chrome);  background: rgba(168,200,255,0.05); }
+.box-slot.is-gold    { border-color: var(--gold);    background: rgba(255,215,0,0.06); }
+.box-slot.is-emerald { border-color: var(--emerald); background: rgba(46,204,113,0.05); }
+.box-slot.is-victory { border-color: var(--victory); background: rgba(232,255,71,0.04); }
+.box-slot.is-sp      { border-color: var(--sp);      background: rgba(192,132,252,0.05); }
+.box-slot.is-vides   { border-color: var(--vides);   background: rgba(255,159,67,0.05); }
+
+.box-slot.guaranteed-slot:not(.populated) { border-color: var(--muted); border-style: dashed; }
+
+.box-num { position: absolute; top: 5px; left: 7px; font-size: 7px; color: var(--muted); letter-spacing: 1px; }
+.box-empty-icon { font-size: 16px; opacity: 0.08; }
+.box-variant-badge { font-family: var(--display); font-size: 6px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 2px 4px; margin-bottom: 3px; }
+.box-player { font-size: 7px; color: var(--text); text-align: center; line-height: 1.3; max-width: 100%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.box-price { font-family: var(--display); font-size: 11px; font-weight: 700; margin-top: 3px; }
+.box-price.estimated { color: var(--muted); }
+.box-est-badge { position: absolute; top: 4px; right: 4px; font-size: 5px; font-family: var(--display); font-weight: 700; letter-spacing: 0.5px; padding: 1px 3px; color: var(--accent); background: rgba(232,255,71,0.12); border: 1px solid rgba(232,255,71,0.25); }
+
+/* ── Probability row ── */
+.prob-section { background: var(--s1); border: 1px solid var(--border); padding: 20px 24px; margin-bottom: 24px; }
+.prob-title { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+.prob-bars { display: flex; flex-direction: column; gap: 8px; }
+.prob-item { display: flex; align-items: center; gap: 10px; }
+.prob-variant { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; width: 60px; text-align: right; flex-shrink: 0; }
+.prob-bar-wrap { flex: 1; background: var(--s3); height: 3px; }
+.prob-bar { height: 100%; transition: width 0.6s ease; }
+.prob-pct { font-size: 9px; color: var(--muted); width: 52px; flex-shrink: 0; }
+.prob-odds { font-size: 8px; color: var(--muted2); flex-shrink: 0; }
+
+/* ── Drawer ── */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 90; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.overlay.visible { opacity: 1; pointer-events: all; }
+.drawer {
+  position: fixed; right: 0; top: 0; bottom: 0; width: 380px;
+  background: var(--s1); border-left: 1px solid var(--border);
+  z-index: 100; transform: translateX(100%); transition: transform 0.25s ease;
+  overflow-y: auto; padding: 28px;
+}
+.drawer.open { transform: translateX(0); }
+.drawer-close { position: absolute; top: 16px; right: 16px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px; }
+.drawer-close:hover { color: var(--text); }
+.d-player { font-family: var(--display); font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+.d-variant { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; }
+.d-section { margin-bottom: 18px; }
+.d-section-title { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.d-stat { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+.d-stat-label { font-size: 9px; color: var(--muted); }
+.d-stat-val { font-size: 10px; color: var(--text); }
+.d-stat-val.accent { color: var(--accent); font-family: var(--display); }
+.proj-final { background: rgba(232,255,71,0.05); border: 1px solid rgba(232,255,71,0.2); padding: 16px; text-align: center; margin-top: 12px; }
+.proj-final-label { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.proj-final-val { font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--accent); }
+.proj-final-note { font-size: 8px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.sales-hero { background: rgba(232,255,71,0.05); border: 1px solid rgba(232,255,71,0.2); padding: 16px; text-align: center; margin-bottom: 18px; }
+.sales-hero-label { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+.sales-hero-val { font-family: var(--display); font-size: 28px; font-weight: 700; color: var(--accent); }
+.sales-hero-sub { font-size: 8px; color: var(--muted); margin-top: 5px; }
+.listing-card { display: flex; gap: 10px; padding: 10px; margin-bottom: 6px; background: var(--s2); border: 1px solid var(--border); }
+.listing-img { width: 40px; height: 40px; object-fit: cover; flex-shrink: 0; }
+.listing-img-ph { width: 40px; height: 40px; flex-shrink: 0; background: var(--s3); display: flex; align-items: center; justify-content: center; font-size: 16px; opacity: 0.3; }
+.listing-body { flex: 1; min-width: 0; }
+.listing-title { font-size: 8px; color: var(--muted); line-height: 1.4; margin-bottom: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.listing-meta { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.listing-price { font-family: var(--display); font-size: 13px; font-weight: 700; color: var(--accent); }
+.listing-date { font-size: 8px; color: var(--muted); }
+.listing-link { font-size: 8px; color: var(--muted); text-decoration: none; }
+.listing-link:hover { color: var(--text); }
+.afa-badge { font-size: 7px; color: #ffd700; }
+.no-listings { font-size: 9px; color: var(--muted); letter-spacing: 1px; padding: 16px 0; text-align: center; }
+
+/* ── Loading ── */
+.loading-state { padding: 80px 32px; text-align: center; color: var(--muted); font-size: 9px; letter-spacing: 3px; text-transform: uppercase; }
+.loading-dot { display: inline-block; animation: blink 1.2s infinite; }
+.loading-dot:nth-child(2) { animation-delay: 0.2s; }
+.loading-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,100%{opacity:0.15} 50%{opacity:1} }
+
+/* ── Tooltip ── */
+.chart-tooltip {
+  position: fixed; pointer-events: none; z-index: 200;
+  background: var(--s2); border: 1px solid var(--border2);
+  padding: 10px 14px; min-width: 160px;
+  opacity: 0; transition: opacity 0.1s;
+}
+.chart-tooltip.visible { opacity: 1; }
+.tt-val { font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.tt-row { font-size: 8px; color: var(--muted); margin-bottom: 2px; letter-spacing: 0.5px; }
+.tt-row span { color: var(--text); }
+
+@media (max-width: 700px) {
+  .page { padding: 16px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .case-grid { grid-template-columns: repeat(4, 1fr); }
+  .nav { padding: 12px 16px; }
+  .drawer { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="index.html" class="nav-logo">ghostladder</a>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">dashboard</a>
+    <a href="guide.html" class="nav-link">price guide</a>
+    <a href="heatmap.html" class="nav-link">heat map</a>
+    <a href="case-sim.html" class="nav-link">case sim</a>
+    <a href="forecast.html" class="nav-link active">forecast</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-eyebrow">ghostladder · case value model</div>
+    <div class="page-title">case <em>forecast</em></div>
+    <div class="page-sub">500 monte carlo simulations · distribution of possible outcomes · click any bar to inspect that case</div>
+  </div>
+  <div id="main-content">
+    <div class="loading-state">
+      loading<span class="loading-dot">.</span><span class="loading-dot">.</span><span class="loading-dot">.</span>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div class="d-player" id="d-player"></div>
+  <div class="d-variant" id="d-variant"></div>
+  <div id="d-body"></div>
+</div>
+
+<div class="chart-tooltip" id="chart-tooltip">
+  <div class="tt-val" id="tt-val"></div>
+  <div class="tt-row">simulations: <span id="tt-count"></span></div>
+  <div class="tt-row">roi vs retail: <span id="tt-roi"></span></div>
+  <div class="tt-row">data quality: <span id="tt-quality"></span></div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+const SB_URL = 'https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY = 'sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+async function rpc(fn, p={}) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST',headers:SB_H,body:JSON.stringify(p)});
+  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
+  return r.json();
+}
+function parseDate(str) {
+  if (!str) return null;
+  const d = new Date(String(str).substring(0,10) + 'T00:00:00');
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config — tunable constants (pin in db later)
+// ─────────────────────────────────────────────────────────────────────────────
+const SET_CONFIG = [
+  { match: ['nba', 'game face', '2024'],  casePrice: 500, casePack: 12, label: 'NBA 2024–25' },
+  { match: ['wnba', 'game face', '2024'], casePrice: 500, casePack: 12, label: 'WNBA 2024'   },
+  { match: ['mlb', 'game face', '2025'],  casePrice: 425, casePack: 12, label: 'MLB 2025'    },
+];
+
+// Price variance by confidence level — CV = coefficient of variation
+// These are synthetic assumptions; we'll calibrate over time
+const CONF_CV = {
+  'real':         0.12,   // real sales data: ±12% typical spread
+  'High':         0.18,
+  'Medium':       0.30,
+  'Medium-Low':   0.40,
+  'Low':          0.55,
+  'Very Low':     0.70,
+  'set-avg':      0.50,
+};
+
+const N_SIMS   = 500;
+const BIN_SIZE = 25;   // $25 buckets
+
+const VARIANT_ORDER  = ['Base','Victory','Vides','Emerald','Gold','Chrome','Fire','SP'];
+const VARIANT_COLORS = {
+  Base:'var(--base)', Victory:'var(--victory)', Vides:'var(--vides)',
+  Emerald:'var(--emerald)', Gold:'var(--gold)', Chrome:'var(--chrome)',
+  Fire:'var(--fire)', SP:'var(--sp)',
+};
+const POP_DEFAULTS = { Fire:1, Chrome:5, Gold:10, Emerald:25, Vides:25, Victory:50, SP:50, Base:1000 };
+const VARIANT_PROXIMITY = {
+  'Base':    {'Victory':0.9,'Vides':0.85,'Emerald':0.85,'Gold':0.75,'Chrome':0.6,'Fire':0.4,'SP':0.8},
+  'Victory': {'Base':0.9,'Vides':0.9,'Emerald':0.9,'Gold':0.8,'Chrome':0.65,'Fire':0.45,'SP':0.85},
+  'Emerald': {'Base':0.85,'Victory':0.9,'Vides':0.95,'Gold':0.9,'Chrome':0.7,'Fire':0.5,'SP':0.8},
+  'Vides':   {'Base':0.85,'Victory':0.9,'Emerald':0.95,'Gold':0.9,'Chrome':0.7,'Fire':0.5,'SP':0.8},
+  'Gold':    {'Base':0.75,'Victory':0.8,'Emerald':0.9,'Vides':0.9,'Chrome':0.85,'Fire':0.65,'SP':0.7},
+  'Chrome':  {'Base':0.6,'Victory':0.65,'Emerald':0.7,'Vides':0.7,'Gold':0.85,'Fire':0.8,'SP':0.6},
+  'Fire':    {'Base':0.4,'Victory':0.45,'Emerald':0.5,'Vides':0.5,'Gold':0.65,'Chrome':0.8,'SP':0.4},
+  'SP':      {'Base':0.8,'Victory':0.85,'Emerald':0.8,'Vides':0.8,'Gold':0.7,'Chrome':0.6,'Fire':0.4},
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let allData     = null;
+let activeSet   = null;
+let simResults  = [];    // array of {totalValue, pulls, hasEst, estFraction}
+let selectedBin = null;  // currently highlighted bin index
+let activePulls = null;  // pulls shown in the case grid
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Data load
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const [pi, recentSales] = await Promise.all([
+      rpc('get_price_intelligence'),
+      rpc('get_recent_sales', {limit_rows: 500}),
+    ]);
+    const products = pi.filter(r => r.player && r.player !== 'Unknown').map(r => ({
+      set: r.set_name, player: r.player, variant: r.variant,
+      totalSales: +r.total_sales || 0, avgPrice: +r.avg_price || 0,
+      avg30d: +r.avg_30d || 0, sales30d: +r.sales_30d || 0,
+      avg90d: +r.avg_90d || 0, sales90d: +r.sales_90d || 0,
+      lastSaleDate: r.last_sale_date, lastSalePrice: +r.last_sale_price || 0,
+    }));
+    const allListings = recentSales.filter(r => r.player && r.player !== 'Unknown').map(r => ({
+      set: r.set_name, player: r.player, variant: r.variant,
+      price: +r.price || 0, date: r.date,
+      image: r.image_url, url: r.ebay_url, afa: r.afa_grade, title: '',
+    }));
+    allData = { products, allListings };
+    initPage();
+  } catch(e) {
+    document.getElementById('main-content').innerHTML =
+      `<div class="loading-state" style="color:#ff4455">failed to load: ${e.message}</div>`;
+  }
+}
+
+function getSetConfig(setName) {
+  const lower = (setName || '').toLowerCase();
+  const ordered = [...SET_CONFIG].sort((a,b) => b.match.join('').length - a.match.join('').length);
+  for (const cfg of ordered) {
+    if (cfg.match.every(kw => lower.includes(kw))) return cfg;
+  }
+  return null;
+}
+
+function initPage() {
+  const allSetNames = [...new Set((allData.products||[])
+    .filter(p => p.player && p.player !== 'Unknown' && p.set).map(p => p.set))];
+  const availableSets = allSetNames.filter(s => getSetConfig(s) !== null);
+  if (!availableSets.length) {
+    document.getElementById('main-content').innerHTML =
+      `<div class="loading-state" style="color:#ff4455">no configured sets found</div>`;
+    return;
+  }
+  activeSet = availableSets[0];
+  renderPage(availableSets);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page render
+// ─────────────────────────────────────────────────────────────────────────────
+function renderPage(sets) {
+  document.getElementById('main-content').innerHTML = `
+    <div class="set-selector" id="set-selector"></div>
+    <div class="stats-row" id="stats-row"></div>
+
+    <div class="forecast-panel">
+      <div class="forecast-header">
+        <div>
+          <div class="forecast-title">outcome distribution</div>
+          <div style="font-size:8px;color:var(--muted);margin-top:4px;letter-spacing:1px">
+            each bar = a bucket of simulated case values · color = data quality · click a bar to see that case
+          </div>
+        </div>
+        <div class="forecast-controls">
+          <span class="n-label">${N_SIMS} simulations</span>
+          <button class="reset-btn" onclick="resetForecast()">reset</button>
+          <button class="run-btn" id="run-btn" onclick="runForecast()">▶ run simulation</button>
+        </div>
+      </div>
+      <div class="chart-area" id="chart-area">
+        <div class="chart-empty">
+          <div class="chart-empty-icon">◈</div>
+          <div class="chart-empty-text">press run simulation to generate forecast</div>
+        </div>
+      </div>
+      <div class="chart-legend" id="chart-legend" style="display:none">
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-real)"></div>all real data</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-mixed)"></div>mixed data</div>
+        <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-est)"></div>mostly projected</div>
+        <div class="legend-divider"></div>
+        <div class="legend-item"><div style="width:10px;height:2px;background:var(--accent);border-radius:1px"></div>retail price</div>
+        <div class="legend-item"><div style="width:10px;height:2px;background:rgba(232,255,71,0.25);border-radius:1px;border-top:1px dashed rgba(232,255,71,0.4)"></div>median · p10 · p90</div>
+      </div>
+      <div class="sim-summary" id="sim-summary"></div>
+    </div>
+
+    <div class="case-section">
+      <div class="case-section-header">
+        <div class="case-section-title">case breakdown</div>
+        <div class="case-section-meta" id="case-meta">click a bar above to populate</div>
+      </div>
+      <div class="case-grid" id="case-grid"></div>
+    </div>
+
+    <div class="prob-section">
+      <div class="prob-title">guaranteed hit · variant odds per case</div>
+      <div class="prob-bars" id="prob-bars"></div>
+    </div>
+  `;
+
+  renderSetSelector(sets);
+  renderStats();
+  renderEmptyGrid();
+  renderProbabilities();
+}
+
+function renderSetSelector(sets) {
+  document.getElementById('set-selector').innerHTML = sets.map(s =>
+    `<button class="set-btn ${s===activeSet?'active':''}" onclick="switchSet('${s.replace(/'/g,"\\'")}')">
+      ${(getSetConfig(s)||{label:s}).label}
+    </button>`).join('');
+}
+
+function switchSet(s) {
+  activeSet = s; simResults = []; selectedBin = null; activePulls = null;
+  const sets = [...new Set((allData.products||[])
+    .filter(p => p.player && p.player!=='Unknown' && p.set).map(p=>p.set))]
+    .filter(s => getSetConfig(s)!==null);
+  renderSetSelector(sets);
+  renderStats();
+  renderEmptyGrid();
+  renderProbabilities();
+  document.getElementById('chart-area').innerHTML = `<div class="chart-empty"><div class="chart-empty-icon">◈</div><div class="chart-empty-text">press run simulation to generate forecast</div></div>`;
+  document.getElementById('chart-legend').style.display = 'none';
+  document.getElementById('sim-summary').classList.remove('visible');
+  document.getElementById('case-meta').textContent = 'click a bar above to populate';
+  document.getElementById('run-btn').disabled = false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Stats
+// ─────────────────────────────────────────────────────────────────────────────
+function renderStats() {
+  const cfg = getSetConfig(activeSet) || { casePrice:500, casePack:12 };
+  const products = (allData.products||[]).filter(p => p.set===activeSet && p.player && p.player!=='Unknown');
+  const { projections } = buildProjections(activeSet, products);
+
+  // Avg base
+  const basePrices = products.filter(p => p.variant==='Base' && p.avgPrice>0).map(p => p.avgPrice);
+  const avgBase = basePrices.length ? Math.round(basePrices.reduce((a,b)=>a+b,0)/basePrices.length) : 0;
+
+  // Expected value from pool math (point estimate)
+  const { hitPool, fullPool } = buildSplitPools(activeSet);
+  let expectedValue = 0;
+  if (hitPool.length && fullPool.length) {
+    const hitAvg  = hitPool.reduce((s,f)=>s+f.price,0)/hitPool.length;
+    const fullAvg = fullPool.reduce((s,f)=>s+f.price,0)/fullPool.length;
+    expectedValue = Math.round(hitAvg + fullAvg*(cfg.casePack-1));
+  }
+  const expectedRoi = expectedValue > 0 ? Math.round(((expectedValue-cfg.casePrice)/cfg.casePrice)*100) : 0;
+
+  // Estimated fraction of pool
+  const estCount = fullPool.filter(f=>f.isEstimated).length;
+  const estPct = fullPool.length > 0 ? Math.round(estCount/fullPool.length*100) : 0;
+
+  // Highest single card value in pool
+  const maxCard = fullPool.length ? Math.max(...fullPool.map(f=>f.price)) : 0;
+
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">case retail</div>
+      <div class="stat-value">$${cfg.casePrice}</div>
+      <div class="stat-sub">${cfg.casePack} figures · 1 guaranteed hit</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">avg base value</div>
+      <div class="stat-value accent">$${avgBase||'—'}</div>
+      <div class="stat-sub">${basePrices.length} players tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">point estimate</div>
+      <div class="stat-value ${expectedRoi>=0?'green':'red'}">${expectedRoi>=0?'+':''}${expectedRoi}%</div>
+      <div class="stat-sub">expected value $${expectedValue}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">max chase value</div>
+      <div class="stat-value gold">$${maxCard ? maxCard.toLocaleString() : '—'}</div>
+      <div class="stat-sub">highest single card in pool</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">data coverage</div>
+      <div class="stat-value" style="color:${estPct>50?'var(--vides)':'var(--green)'}">${100-estPct}%</div>
+      <div class="stat-sub">${estPct}% of pool is projected</div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Empty grid
+// ─────────────────────────────────────────────────────────────────────────────
+function renderEmptyGrid() {
+  const cfg = getSetConfig(activeSet)||{casePack:12};
+  let html = '';
+  for (let i=0; i<cfg.casePack; i++) {
+    const g = i===0 ? 'guaranteed-slot' : '';
+    html += `<div class="box-slot ${g}" id="slot-${i}">
+      <span class="box-num">${i+1}</span>
+      ${i===0
+        ? '<span class="box-empty-icon" style="color:var(--accent);opacity:0.3">★</span>'
+        : '<span class="box-empty-icon">◻</span>'}
+    </div>`;
+  }
+  document.getElementById('case-grid').innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Probabilities
+// ─────────────────────────────────────────────────────────────────────────────
+function renderProbabilities() {
+  const { hitPool, fullPool } = buildSplitPools(activeSet);
+  if (!hitPool.length) { document.getElementById('prob-bars').innerHTML = '<div style="font-size:9px;color:var(--muted)">not enough data yet</div>'; return; }
+  const cfg = getSetConfig(activeSet) || { casePack: 12 };
+  const totalCases = fullPool.length / cfg.casePack;
+  const byV = {};
+  hitPool.forEach(f => { byV[f.variant] = (byV[f.variant]||0)+1; });
+  const variants = VARIANT_ORDER.filter(v => v!=='Base' && byV[v]);
+
+  document.getElementById('prob-bars').innerHTML = variants.map(v => {
+    const n = byV[v]||0;
+    const pct = n / totalCases * 100;
+    const dp = pct<0.1 ? pct.toFixed(3) : pct<1 ? pct.toFixed(2) : pct.toFixed(1);
+    const oddsN = n > 0 ? totalCases/n : 0;
+    const oddsStr = oddsN >= 10 ? '1:'+Math.round(oddsN).toLocaleString()+' cases' : oddsN.toFixed(1)+' per case';
+    return `<div class="prob-item">
+      <span class="prob-variant" style="color:${VARIANT_COLORS[v]||'var(--muted)'}">${v}</span>
+      <div class="prob-bar-wrap"><div class="prob-bar" style="width:${Math.min(100,pct)}%;background:${VARIANT_COLORS[v]||'var(--muted)'}"></div></div>
+      <span class="prob-pct">${dp}%</span>
+      <span class="prob-odds">${oddsStr}</span>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MONTE CARLO SIMULATION ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Draw a price from a log-normal distribution centered on mu with CV
+// Log-normal is appropriate for prices (bounded at 0, right-skewed)
+function samplePrice(centralPrice, cv) {
+  if (cv <= 0) return centralPrice;
+  // Log-normal params from mu and cv
+  const sigma2 = Math.log(1 + cv*cv);
+  const sigma  = Math.sqrt(sigma2);
+  const mu     = Math.log(centralPrice) - sigma2/2;
+  // Box-Muller transform for standard normal
+  const u1 = Math.random(), u2 = Math.random();
+  const z  = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+  const sample = Math.exp(mu + sigma*z);
+  // Soft floor at 20% of central price to avoid nonsense values
+  return Math.max(centralPrice * 0.2, Math.round(sample));
+}
+
+function simulateOneCase(setName) {
+  const cfg = getSetConfig(setName) || { casePack: 12 };
+  const { hitPool, remainingPool } = buildSplitPools(setName);
+  if (!hitPool.length) return null;
+
+  const pulls = [];
+
+  // Slot 0: guaranteed hit — sample from parallel pool
+  const hitIdx = Math.floor(Math.random() * hitPool.length);
+  const hitTemplate = hitPool[hitIdx];
+  const hitCv  = CONF_CV[hitTemplate.isEstimated ? (hitTemplate.confidence||'set-avg') : 'real'];
+  const hitPrice = samplePrice(hitTemplate.price, hitCv);
+  pulls.push({ ...hitTemplate, drawnPrice: hitPrice, slotIndex: 0, isGuaranteed: true });
+
+  // Slots 1–(n-1): sample from remaining pool
+  for (let i = 1; i < cfg.casePack; i++) {
+    const idx = Math.floor(Math.random() * remainingPool.length);
+    const t   = remainingPool[idx];
+    const cv  = CONF_CV[t.isEstimated ? (t.confidence||'set-avg') : 'real'];
+    const sampledPrice = samplePrice(t.price, cv);
+    pulls.push({ ...t, drawnPrice: sampledPrice, slotIndex: i, isGuaranteed: false });
+  }
+
+  const totalValue  = pulls.reduce((s,p) => s+p.drawnPrice, 0);
+  const estCount    = pulls.filter(p => p.isEstimated).length;
+  const estFraction = estCount / pulls.length;
+
+  return { totalValue: Math.round(totalValue), pulls, estFraction };
+}
+
+function runForecast() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.textContent = 'running...';
+
+  // Use setTimeout to let the UI update before the heavy computation
+  setTimeout(() => {
+    simResults = [];
+    for (let i = 0; i < N_SIMS; i++) {
+      const result = simulateOneCase(activeSet);
+      if (result) simResults.push(result);
+    }
+    if (!simResults.length) {
+      btn.disabled = false;
+      btn.textContent = '▶ run simulation';
+      return;
+    }
+    renderDistribution();
+    document.getElementById('chart-legend').style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = '↺ re-run';
+  }, 20);
+}
+
+function resetForecast() {
+  simResults = []; selectedBin = null; activePulls = null;
+  document.getElementById('chart-area').innerHTML = `<div class="chart-empty"><div class="chart-empty-icon">◈</div><div class="chart-empty-text">press run simulation to generate forecast</div></div>`;
+  document.getElementById('chart-legend').style.display = 'none';
+  document.getElementById('sim-summary').classList.remove('visible');
+  document.getElementById('case-meta').textContent = 'click a bar above to populate';
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('run-btn').textContent = '▶ run simulation';
+  renderEmptyGrid();
+  closeDrawer();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DISTRIBUTION CHART
+// ─────────────────────────────────────────────────────────────────────────────
+function renderDistribution() {
+  const cfg = getSetConfig(activeSet) || { casePrice: 500 };
+
+  // Bin all simulations
+  const values = simResults.map(r => r.totalValue);
+  const minVal = Math.min(...values);
+  const maxVal = Math.max(...values);
+  const binMin = Math.floor(minVal / BIN_SIZE) * BIN_SIZE;
+  const binMax = Math.ceil(maxVal  / BIN_SIZE) * BIN_SIZE;
+  const numBins = Math.ceil((binMax - binMin) / BIN_SIZE);
+
+  // Build bins
+  const bins = Array.from({length: numBins}, (_, i) => ({
+    lo:       binMin + i * BIN_SIZE,
+    hi:       binMin + (i+1) * BIN_SIZE,
+    sims:     [],
+    count:    0,
+    estSum:   0,
+  }));
+
+  simResults.forEach(r => {
+    const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins - 1);
+    if (idx >= 0 && idx < bins.length) {
+      bins[idx].sims.push(r);
+      bins[idx].count++;
+      bins[idx].estSum += r.estFraction;
+    }
+  });
+
+  // Stats for percentile lines
+  const sorted = [...values].sort((a,b) => a-b);
+  const p10  = sorted[Math.floor(sorted.length * 0.10)];
+  const p50  = sorted[Math.floor(sorted.length * 0.50)];
+  const p90  = sorted[Math.floor(sorted.length * 0.90)];
+  const mean = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+  const pctAboveRetail = Math.round(values.filter(v => v >= cfg.casePrice).length / values.length * 100);
+
+  const maxCount = Math.max(...bins.map(b => b.count));
+
+  // SVG dimensions
+  const W = 900, H = 200;
+  const PAD = { top: 16, right: 20, bottom: 36, left: 48 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top  - PAD.bottom;
+
+  const barW  = chartW / numBins;
+  const xPos  = val => PAD.left + (val - binMin) / (binMax - binMin) * chartW;
+  const yPos  = count => PAD.top + chartH - (count / maxCount) * chartH;
+  const yH    = count => (count / maxCount) * chartH;
+
+  // Bin color by est fraction
+  function binColor(b) {
+    if (!b.count) return 'transparent';
+    const avgEst = b.estSum / b.count;
+    if (avgEst < 0.25) return 'var(--bin-real)';
+    if (avgEst < 0.60) return 'var(--bin-mixed)';
+    return 'var(--bin-est)';
+  }
+
+  // CI shading between p10 and p90
+  const ciX1 = xPos(p10);
+  const ciX2 = xPos(p90);
+
+  // Build bars
+  let barsSvg = '';
+  bins.forEach((b, i) => {
+    if (!b.count) return;
+    const x = PAD.left + i * barW;
+    const h = yH(b.count);
+    const y = PAD.top + chartH - h;
+    const color = binColor(b);
+    const isSelected = selectedBin === i;
+    const opacity = selectedBin === null ? 0.85 : (isSelected ? 1.0 : 0.3);
+    barsSvg += `<rect
+      class="dist-bar"
+      data-bin="${i}"
+      x="${x + 1}" y="${y}"
+      width="${Math.max(1, barW - 2)}" height="${h}"
+      fill="${color}" opacity="${opacity}"
+      style="cursor:pointer;transition:opacity 0.15s"
+      onmouseenter="barHover(event,${i})"
+      onmouseleave="barLeave()"
+      onclick="selectBin(${i})"
+    />`;
+  });
+
+  // Y-axis ticks
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+  let yAxis = '';
+  yTicks.forEach(t => {
+    const y = PAD.top + chartH - t * chartH;
+    const count = Math.round(t * maxCount);
+    yAxis += `<line x1="${PAD.left - 4}" y1="${y}" x2="${PAD.left}" y2="${y}" stroke="#333" stroke-width="1"/>`;
+    yAxis += `<text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" fill="#444" font-size="8" font-family="Space Mono">${count}</text>`;
+  });
+
+  // X-axis ticks — every 3rd bin or at multiples of $100
+  let xAxis = '';
+  const tickStep = Math.ceil(numBins / 10) * BIN_SIZE;
+  for (let v = Math.ceil(binMin/100)*100; v <= binMax; v += 100) {
+    const x = xPos(v);
+    xAxis += `<line x1="${x}" y1="${PAD.top+chartH}" x2="${x}" y2="${PAD.top+chartH+4}" stroke="#333" stroke-width="1"/>`;
+    xAxis += `<text x="${x}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#444" font-size="8" font-family="Space Mono">$${v}</text>`;
+  }
+
+  // Gridlines
+  let grid = '';
+  yTicks.slice(1).forEach(t => {
+    const y = PAD.top + chartH - t * chartH;
+    grid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="#1a1a1a" stroke-width="1"/>`;
+  });
+
+  // CI shading (p10–p90)
+  const ciShade = `<rect x="${ciX1}" y="${PAD.top}" width="${ciX2-ciX1}" height="${chartH}" fill="rgba(232,255,71,0.04)" />`;
+  const ciShade50 = `<rect x="${xPos(sorted[Math.floor(sorted.length*0.25)])}" y="${PAD.top}" width="${xPos(sorted[Math.floor(sorted.length*0.75)])-xPos(sorted[Math.floor(sorted.length*0.25)])}" height="${chartH}" fill="rgba(232,255,71,0.05)" />`;
+
+  // Reference lines: p10, median, p90, retail
+  function vLine(val, color, label, dashed=false) {
+    const x = xPos(val);
+    if (x < PAD.left || x > W - PAD.right) return '';
+    const dash = dashed ? 'stroke-dasharray="4,3"' : '';
+    return `
+      <line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+chartH}" stroke="${color}" stroke-width="1" ${dash} opacity="0.7"/>
+      <text x="${x+3}" y="${PAD.top+10}" fill="${color}" font-size="7" font-family="Space Mono" opacity="0.8">${label}</text>`;
+  }
+
+  const retailLine = vLine(cfg.casePrice, '#e8ff47', 'retail', false);
+  const p10Line    = vLine(p10,  'rgba(232,255,71,0.4)', 'p10', true);
+  const p50Line    = vLine(p50,  'rgba(232,255,71,0.6)', 'med', true);
+  const p90Line    = vLine(p90,  'rgba(232,255,71,0.4)', 'p90', true);
+
+  const svg = `<svg class="dist-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    ${grid}
+    ${ciShade}
+    ${ciShade50}
+    ${barsSvg}
+    ${retailLine}
+    ${p10Line}
+    ${p50Line}
+    ${p90Line}
+    ${yAxis}
+    ${xAxis}
+    <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/>
+    <line x1="${PAD.left}" y1="${PAD.top+chartH}" x2="${W-PAD.right}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/>
+  </svg>`;
+
+  document.getElementById('chart-area').innerHTML = svg;
+
+  // Summary strip
+  const summaryEl = document.getElementById('sim-summary');
+  const meanRoi = Math.round((mean - cfg.casePrice) / cfg.casePrice * 100);
+  summaryEl.className = 'sim-summary visible';
+  summaryEl.innerHTML = `
+    <div>
+      <div class="sim-sum-label">median outcome</div>
+      <div class="sim-sum-val ${p50>=cfg.casePrice?'green':'red'}">$${p50.toLocaleString()}</div>
+    </div>
+    <div>
+      <div class="sim-sum-label">mean outcome</div>
+      <div class="sim-sum-val ${mean>=cfg.casePrice?'green':'red'}">$${mean.toLocaleString()}</div>
+    </div>
+    <div>
+      <div class="sim-sum-label">p10 / p90 range</div>
+      <div class="sim-sum-val" style="font-size:14px;color:var(--text)">$${p10.toLocaleString()} – $${p90.toLocaleString()}</div>
+    </div>
+    <div>
+      <div class="sim-sum-label">% above retail</div>
+      <div class="sim-sum-val ${pctAboveRetail>=50?'green':'red'}">${pctAboveRetail}%</div>
+    </div>
+    <div class="sim-sum-note">
+      median roi: <strong style="color:${meanRoi>=0?'var(--green)':'var(--red)'}">${meanRoi>=0?'+':''}${meanRoi}%</strong><br>
+      ${N_SIMS} simulations · $${BIN_SIZE} bins<br>
+      shaded: 25th–75th / 10th–90th pctile
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bar interaction
+// ─────────────────────────────────────────────────────────────────────────────
+function barHover(event, binIdx) {
+  const b = getBins()[binIdx];
+  if (!b || !b.count) return;
+
+  const cfg = getSetConfig(activeSet) || { casePrice: 500 };
+  const midVal = (b.lo + b.hi) / 2;
+  const roi = Math.round((midVal - cfg.casePrice) / cfg.casePrice * 100);
+  const avgEst = b.count > 0 ? b.estSum / b.count : 0;
+  const quality = avgEst < 0.25 ? 'real data' : avgEst < 0.60 ? 'mixed' : 'mostly projected';
+
+  const tt = document.getElementById('chart-tooltip');
+  document.getElementById('tt-val').textContent = `$${b.lo.toLocaleString()} – $${b.hi.toLocaleString()}`;
+  document.getElementById('tt-count').textContent = `${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
+  document.getElementById('tt-roi').textContent = `${roi>=0?'+':''}${roi}%`;
+  document.getElementById('tt-quality').textContent = quality;
+  tt.classList.add('visible');
+  positionTooltip(event);
+}
+
+function barLeave() {
+  document.getElementById('chart-tooltip').classList.remove('visible');
+}
+
+function positionTooltip(e) {
+  const tt = document.getElementById('chart-tooltip');
+  const x = e.clientX + 16;
+  const y = e.clientY - 60;
+  tt.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  tt.style.top  = Math.max(10, y) + 'px';
+}
+
+document.addEventListener('mousemove', e => {
+  if (document.getElementById('chart-tooltip').classList.contains('visible')) positionTooltip(e);
+});
+
+function getBins() {
+  // Recompute bin structure from simResults
+  if (!simResults.length) return [];
+  const values = simResults.map(r => r.totalValue);
+  const binMin = Math.floor(Math.min(...values) / BIN_SIZE) * BIN_SIZE;
+  const binMax = Math.ceil(Math.max(...values) / BIN_SIZE) * BIN_SIZE;
+  const numBins = Math.ceil((binMax - binMin) / BIN_SIZE);
+  const bins = Array.from({length: numBins}, (_, i) => ({
+    lo: binMin + i*BIN_SIZE, hi: binMin + (i+1)*BIN_SIZE,
+    sims: [], count: 0, estSum: 0,
+  }));
+  simResults.forEach(r => {
+    const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins-1);
+    if (idx >= 0 && idx < bins.length) { bins[idx].sims.push(r); bins[idx].count++; bins[idx].estSum += r.estFraction; }
+  });
+  return bins;
+}
+
+function selectBin(binIdx) {
+  const bins = getBins();
+  const b = bins[binIdx];
+  if (!b || !b.count) return;
+
+  selectedBin = binIdx;
+
+  // Highlight selected bar, dim others
+  document.querySelectorAll('.dist-bar').forEach(el => {
+    const idx = parseInt(el.dataset.bin);
+    el.setAttribute('opacity', idx === binIdx ? '1.0' : '0.25');
+  });
+
+  // Pick the median simulation from this bin
+  const sortedSims = [...b.sims].sort((a,b) => a.totalValue - b.totalValue);
+  const medSim = sortedSims[Math.floor(sortedSims.length / 2)];
+  activePulls = medSim.pulls;
+
+  // Populate case grid
+  populateCaseGrid(medSim);
+}
+
+function populateCaseGrid(sim) {
+  const cfg = getSetConfig(activeSet) || { casePrice: 500 };
+  const totalValue = sim.totalValue;
+  const roi = Math.round((totalValue - cfg.casePrice) / cfg.casePrice * 100);
+  const estCount = sim.pulls.filter(p=>p.isEstimated).length;
+
+  document.getElementById('case-meta').innerHTML =
+    `case value: <strong style="color:${totalValue>=cfg.casePrice?'var(--green)':'var(--red)'}">$${totalValue.toLocaleString()}</strong>
+     &nbsp;·&nbsp; roi: <strong style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi>=0?'+':''}${roi}%</strong>
+     &nbsp;·&nbsp; ${estCount} projected figures`;
+
+  sim.pulls.forEach((pull, i) => {
+    const slot = document.getElementById('slot-' + i);
+    if (!slot) return;
+    const vLow  = pull.variant.toLowerCase();
+    const isHit = pull.variant !== 'Base';
+    const estBadge = (isHit && pull.isEstimated) ? `<span class="box-est-badge">EST</span>` : '';
+
+    slot.className = `box-slot populated${isHit?' is-hit is-'+vLow:''}${pull.isGuaranteed?' guaranteed-slot':''}`;
+    slot.style.animationDelay = (i * 0.04) + 's';
+    if (isHit) slot.setAttribute('onclick', `openHitDrawer(${i})`);
+    else slot.removeAttribute('onclick');
+
+    slot.innerHTML = `
+      <span class="box-num">${i+1}${pull.isGuaranteed?' ★':''}</span>
+      ${estBadge}
+      <span class="box-variant-badge" style="color:${VARIANT_COLORS[pull.variant]||'var(--muted)'}">${pull.variant}</span>
+      <span class="box-player">${pull.player}</span>
+      <span class="box-price${pull.isEstimated?' estimated':''}">$${Math.round(pull.drawnPrice).toLocaleString()}</span>`;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hit drawer
+// ─────────────────────────────────────────────────────────────────────────────
+function openHitDrawer(i) {
+  if (!activePulls) return;
+  const pull = activePulls[i];
+  if (!pull || pull.variant === 'Base') return;
+  document.getElementById('d-player').textContent = pull.player;
+  document.getElementById('d-variant').textContent = pull.variant + (pull.isEstimated ? ' · Projected Value' : ' · Sales History');
+  if (pull.isEstimated) renderProjectionBody(pull);
+  else renderSalesBody(pull);
+  document.getElementById('overlay').classList.add('visible');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('overlay').classList.remove('visible');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+function renderProjectionBody(pull) {
+  const products = (allData.products||[]).filter(p => p.set===activeSet && p.player!=='Unknown');
+  const { projections, byPlayer } = buildProjections(activeSet, products);
+  const proj = projections[pull.player+'|||'+pull.variant];
+  if (!proj) { document.getElementById('d-body').innerHTML = '<div style="color:var(--muted);padding:20px 0;font-size:10px">No projection data.</div>'; return; }
+
+  const pv = byPlayer[pull.player]||{};
+  const known = Object.entries(pv).filter(([,d])=>d.avgPrice>0)
+    .sort((a,b)=>{const o={Base:0,Victory:1,Vides:2,Emerald:3,Gold:4,Chrome:5,Fire:6,SP:7};return (o[a[0]]??99)-(o[b[0]]??99);})
+    .map(([v,d]) => {
+      const bp = bestPriceFull(d);
+      return `<div class="d-stat"><span class="d-stat-label">${v}</span>
+        <span class="d-stat-val accent">$${Math.round(d.avgPrice)} · ${d.totalSales} sales${bp?` <span style="font-size:7px;color:var(--muted)">(${bp.recency})</span>`:''}</span></div>`;
+    }).join('');
+
+  const anchors = proj.anchors||[];
+  const tw = anchors.reduce((s,a)=>s+a.weight, 0);
+  let anchorsHtml = '';
+  if (anchors.length) {
+    anchorsHtml = `<div class="d-section-title">anchors · ${anchors.length}</div>` +
+      anchors.map(a => {
+        const wp = tw>0 ? Math.round(a.weight/tw*100) : 0;
+        const rc = a.sourceRecency==='30d'?'var(--accent)':a.sourceRecency==='90d'?'#ffb347':'var(--muted)';
+        return `<div style="background:var(--s2);border:1px solid var(--border);padding:10px 12px;margin-bottom:4px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:9px">${a.sourceVariant} → ${pull.variant}</span>
+            <span style="font-family:var(--display);font-size:12px;color:var(--accent)">$${a.impliedPrice}</span>
+          </div>
+          <div style="font-size:8px;color:var(--muted);line-height:1.7">
+            $${a.sourcePrice} × ${a.ratio}× = $${a.impliedPrice}<br>
+            <span style="color:${rc}">${a.sourceRecency}</span> · ${a.sourceSales} sales · proximity ${Math.round(a.proximity*100)}%
+          </div>
+          <div style="margin-top:5px;display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:2px;background:var(--border)"><div style="width:${Math.max(4,wp)}%;height:100%;background:var(--accent);opacity:0.5"></div></div>
+            <span style="font-size:7px;color:var(--muted)">${wp}%</span>
+          </div>
+        </div>`;
+      }).join('');
+  }
+
+  const sc = proj.confidenceScore||0;
+  const cc = sc>=70?'#6fcf97':sc>=40?'#ffb347':'#ff6b6b';
+  const h30 = anchors.some(a=>a.sourceRecency==='30d');
+  const h90 = anchors.some(a=>a.sourceRecency==='90d');
+  const rn = h30?'Using 30-day prices.':h90?'Using 90-day prices.':anchors.length?'Using all-time averages.':'';
+
+  // Sampled price note
+  const cv = CONF_CV[pull.isEstimated?(pull.confidence||'set-avg'):'real'];
+  const cvPct = Math.round(cv*100);
+
+  document.getElementById('d-body').innerHTML = `
+    <div class="d-section">
+      <div class="d-section-title">confidence</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <div style="flex:1;height:4px;background:var(--border);border-radius:2px">
+          <div style="width:${sc}%;height:100%;background:${cc};border-radius:2px"></div>
+        </div>
+        <span style="font-family:var(--display);font-size:9px;color:${cc};white-space:nowrap">${proj.confidence}</span>
+      </div>
+      ${rn?`<div style="font-size:8px;color:var(--muted)">${rn}</div>`:''}
+    </div>
+    <div class="d-section">${anchorsHtml}</div>
+    <div class="proj-final">
+      <div class="proj-final-label">central projection</div>
+      <div class="proj-final-val">$${proj.price}</div>
+      <div class="proj-final-note">
+        This simulation drew <strong style="color:var(--accent)">$${Math.round(pull.drawnPrice)}</strong> from a log-normal
+        distribution centered on $${proj.price} with ±${cvPct}% spread (${proj.confidence} confidence).<br><br>
+        ${anchors.length>1?`Weighted avg of ${anchors.length} anchors.`:anchors.length===1?`Based on ${anchors[0].sourceVariant} only.`:'Statistical estimate.'}
+      </div>
+    </div>
+    ${known?`<div class="d-section" style="margin-top:14px"><div class="d-section-title">known data for ${pull.player}</div>${known}</div>`:''}`;
+}
+
+function renderSalesBody(pull) {
+  const rd = pull.realData;
+  const listings = (allData.allListings||[])
+    .filter(l => l.set===activeSet && l.player===pull.player && l.variant===pull.variant)
+    .sort((a,b) => parseDate(b.date) - parseDate(a.date));
+  const dp = bestPriceSim(rd)||rd?.avgPrice||0;
+  const sl = rd?.sales30d ? `${rd.sales30d} sales in last 30d · ${rd.totalSales||0} all-time` : `${rd?.totalSales||0} total sales`;
+
+  const cv = CONF_CV['real'];
+  const cvPct = Math.round(cv*100);
+
+  document.getElementById('d-body').innerHTML = `
+    <div class="sales-hero">
+      <div class="sales-hero-label">market value</div>
+      <div class="sales-hero-val">$${Math.round(dp).toLocaleString()}</div>
+      <div class="sales-hero-sub">${sl}</div>
+    </div>
+    <div class="d-section">
+      <div class="d-section-title">price history</div>
+      <div class="d-stat"><span class="d-stat-label">30d avg</span><span class="d-stat-val accent">${rd?.avg30d?'$'+Math.round(rd.avg30d):'—'}</span></div>
+      <div class="d-stat"><span class="d-stat-label">90d avg</span><span class="d-stat-val">${rd?.avg90d?'$'+Math.round(rd.avg90d):'—'}</span></div>
+      <div class="d-stat"><span class="d-stat-label">All-time avg</span><span class="d-stat-val">${rd?.avgPrice?'$'+Math.round(rd.avgPrice):'—'}</span></div>
+      <div class="d-stat"><span class="d-stat-label">Last sale</span><span class="d-stat-val">${rd?.lastSalePrice?'$'+Math.round(rd.lastSalePrice):'—'}</span></div>
+    </div>
+    <div class="d-section">
+      <div class="d-section-title">simulation note</div>
+      <div style="font-size:8px;color:var(--muted);line-height:1.7">
+        This simulation drew <strong style="color:var(--accent)">$${Math.round(pull.drawnPrice)}</strong> from a log-normal
+        distribution centered on $${Math.round(dp)} with ±${cvPct}% spread (real sales data).
+      </div>
+    </div>
+    <div class="d-section">
+      <div class="d-section-title">recent sales (${listings.length})</div>
+      ${listings.length ? listings.slice(0,15).map(l => {
+        const ds = l.date ? parseDate(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}) : '—';
+        const img = l.image
+          ? `<img class="listing-img" src="${l.image}" alt="" loading="lazy" onerror="this.style.display='none'">`
+          : `<div class="listing-img-ph">👻</div>`;
+        return `<div class="listing-card">${img}
+          <div class="listing-body">
+            <div class="listing-title">${l.title||''}</div>
+            <div class="listing-meta">
+              <span class="listing-price">$${Math.round(l.price)}</span>
+              <span class="listing-date">${ds}</span>
+              ${l.afa?`<span class="afa-badge">🏆 ${l.afa}</span>`:''}
+              ${l.url?`<a class="listing-link" href="${l.url}" target="_blank" rel="noopener">↗</a>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('') : '<div class="no-listings">no listings in database</div>'}
+    </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POOL + PROJECTION ENGINE (ported from case-sim)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildSplitPools(setName) {
+  const { pool } = buildPool(setName);
+  const cfg = getSetConfig(setName) || { casePack: 12 };
+  const hitPool  = pool.filter(f => f.variant !== 'Base');
+  const basePool = pool.filter(f => f.variant === 'Base');
+  const totalCases = Math.round(pool.length / cfg.casePack);
+  const remainingParallelCount = Math.max(0, hitPool.length - totalCases);
+  const shuffledHit = [...hitPool].sort(() => Math.random() - 0.5);
+  const remainingParallels = shuffledHit.slice(0, remainingParallelCount);
+  const remainingPool = [...basePool, ...remainingParallels];
+  return { hitPool, fullPool: pool, remainingPool, totalCases };
+}
+
+function buildPool(setName) {
+  const products = (allData.products||[]).filter(p => p.set===setName && p.player && p.player!=='Unknown');
+  const { projections } = buildProjections(setName, products);
+  const pool = []; const poolByVariant = {};
+  [...new Set(products.map(p=>p.player))].forEach(player => {
+    products.filter(p=>p.player===player).forEach(pv => {
+      const pop = POP_DEFAULTS[pv.variant]; if (!pop) return;
+      const price = getPrice(player, pv.variant, products, projections); if (!price) return;
+      for (let i=0; i<pop; i++) {
+        pool.push({ player, variant: pv.variant, price: price.value,
+          isEstimated: price.estimated, confidence: price.confidence,
+          projData: price.projData||null, realData: price.realData||null });
+      }
+      poolByVariant[pv.variant] = (poolByVariant[pv.variant]||0)+pop;
+    });
+  });
+  return { pool, poolByVariant, totalPop: pool.length };
+}
+
+function getPrice(player, variant, products, projections) {
+  const real = products.find(p => p.player===player && p.variant===variant);
+  if (real) { const p=bestPriceSim(real); if (p) return {value:p,estimated:false,confidence:'real',realData:real}; }
+  const proj = projections[player+'|||'+variant];
+  if (proj && proj.price>0) return {value:proj.price,estimated:true,confidence:proj.confidence,projData:proj};
+  const vp = products.filter(p=>p.variant===variant&&p.avgPrice>0).map(p=>p.avgPrice);
+  if (vp.length) return {value:Math.round(vp.reduce((a,b)=>a+b,0)/vp.length),estimated:true,confidence:'set-avg'};
+  return null;
+}
+
+function bestPriceSim(p) {
+  if (!p) return null;
+  if (p.avg30d  && p.sales30d  >= 1) return p.avg30d;
+  if (p.avg90d  && p.sales90d  >= 1) return p.avg90d;
+  if (p.avgPrice && p.totalSales >= 1) return p.avgPrice;
+  return null;
+}
+
+function buildProjections(setName, setProducts) {
+  const byPlayer = {};
+  setProducts.forEach(p => { if (!byPlayer[p.player]) byPlayer[p.player]={}; byPlayer[p.player][p.variant]=p; });
+  const allVariants = [...new Set(setProducts.map(p=>p.variant))];
+  const crossRatios = {};
+  allVariants.forEach(vA => allVariants.forEach(vB => {
+    if (vA===vB) return;
+    crossRatios[vA+'|||'+vB] = [];
+    Object.values(byPlayer).forEach(pv => {
+      const dA=bestPriceFull(pv[vA]), dB=bestPriceFull(pv[vB]);
+      if (dA&&dB&&dA.price>0&&dB.price>0)
+        crossRatios[vA+'|||'+vB].push({ratio:dA.price/dB.price,salesA:dA.sales,salesB:dB.sales});
+    });
+  }));
+  function wmedian(pairs) {
+    if (!pairs.length) return null;
+    const s=[...pairs].sort((a,b)=>a.ratio-b.ratio);
+    const tw=s.reduce((t,p)=>t+Math.min(p.salesA||1,p.salesB||1),0);
+    let cw=0;
+    for (const p of s) { cw+=Math.min(p.salesA||1,p.salesB||1); if(cw>=tw/2) return {ratio:p.ratio,n:pairs.length}; }
+    return {ratio:s[Math.floor(s.length/2)].ratio,n:pairs.length};
+  }
+  const setRatios = {};
+  Object.entries(crossRatios).forEach(([k,p]) => { const r=wmedian(p); if(r) setRatios[k]=r; });
+  const projections = {};
+  Object.entries(byPlayer).forEach(([player,variants]) => {
+    const known=Object.keys(variants).filter(v=>variants[v]?.avgPrice>0);
+    if (!known.length) return;
+    allVariants.forEach(tv => {
+      if (variants[tv]?.avgPrice>0) return;
+      if (!setProducts.some(p=>p.variant===tv)) return;
+      const anchors=[];
+      known.forEach(sv => {
+        const rd=setRatios[tv+'|||'+sv]; if (!rd) return;
+        const sp=bestPriceFull(variants[sv]); if (!sp) return;
+        const prox=(VARIANT_PROXIMITY[tv]||{})[sv]||0.5;
+        const rf=sp.recency==='30d'?1.0:sp.recency==='90d'?0.7:0.4;
+        anchors.push({
+          sourceVariant:sv, sourcePrice:Math.round(sp.price), sourceRecency:sp.recency,
+          sourceSales:sp.sales, ratio:Math.round(rd.ratio*100)/100, ratioN:rd.n,
+          impliedPrice:Math.round(sp.price*rd.ratio), proximity:prox, recencyFactor:rf,
+          weight:prox*rf*Math.sqrt(sp.sales),
+        });
+      });
+      if (!anchors.length) return;
+      const tw=anchors.reduce((s,a)=>s+a.weight,0);
+      const pp=tw>0?Math.round(anchors.reduce((s,a)=>s+a.impliedPrice*a.weight,0)/tw):Math.round(anchors[0].impliedPrice);
+      const h30=anchors.some(a=>a.sourceRecency==='30d'), h90=anchors.some(a=>a.sourceRecency==='90d');
+      const hp=anchors.filter(a=>a.proximity>=0.8).length;
+      let conf,cs;
+      if (anchors.length>=3&&h30&&hp>=2)         {conf='High';cs=90;}
+      else if (anchors.length>=2&&(h30||h90))     {conf='Medium';cs=65;}
+      else if (anchors.length>=2)                 {conf='Medium-Low';cs=45;}
+      else if (anchors.length===1&&anchors[0].sourceSales>=10) {conf='Low';cs=30;}
+      else                                        {conf='Very Low';cs=15;}
+      projections[player+'|||'+tv]={price:pp,projType:'est',confidence:conf,confidenceScore:cs,anchors};
+    });
+  });
+  return { projections, byPlayer };
+}
+
+function bestPriceFull(p) {
+  if (!p) return null;
+  if (p.avg30d  && p.sales30d  >= 1) return {price:p.avg30d,  recency:'30d',      sales:p.sales30d};
+  if (p.avg90d  && p.sales90d  >= 1) return {price:p.avg90d,  recency:'90d',      sales:p.sales90d};
+  if (p.avgPrice && p.totalSales >= 1) return {price:p.avgPrice,recency:'all-time',sales:p.totalSales};
+  return null;
+}
+
+loadData();
+</script>
+</body>
+</html>
