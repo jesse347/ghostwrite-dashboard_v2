@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ghostwrite · market intel</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#080808; --s1:#101010; --s2:#161616; --s3:#1e1e1e; --border:#282828;
+  --accent:#e8ff47; --accent-dim:rgba(232,255,71,0.12);
+  --red:#ff4040; --green:#3ddc84; --text:#f0f0f0; --muted:#666; --muted2:#999;
+  --mono:'DM Mono',monospace; --display:'Bebas Neue',sans-serif; --serif:'Instrument Serif',serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");pointer-events:none;z-index:9999}
+
+/* ── Header ── */
+header{position:sticky;top:0;z-index:100;background:rgba(8,8,8,0.94);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:var(--display);font-size:20px;letter-spacing:3px;color:var(--text)}
+.logo em{color:var(--accent);font-style:normal}
+.header-right{display:flex;align-items:center;gap:20px}
+.nav-links{display:flex;gap:20px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.15s}
+.nav-links a:hover{color:var(--text)}
+.nav-links a.active{color:var(--accent)}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted2)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+.refresh-btn{background:var(--s3);border:1px solid var(--border);color:var(--muted2);font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;cursor:pointer;transition:all 0.15s}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* ── Layout ── */
+.page{max-width:1440px;margin:0 auto;padding:32px}
+.section-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── Stat cards ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:32px}
+.stat-card{background:var(--s1);padding:22px 24px;position:relative;overflow:hidden;transition:background 0.2s}
+.stat-card:hover{background:var(--s2)}
+.stat-card::before{content:'';position:absolute;bottom:0;left:0;width:0;height:2px;background:var(--accent);transition:width 0.5s ease}
+.stat-card:hover::before{width:100%}
+.stat-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.stat-value{font-family:var(--display);font-size:44px;line-height:1;color:var(--text);letter-spacing:1px}
+.stat-sub{font-size:10px;color:var(--muted2);margin-top:5px;letter-spacing:0.5px}
+
+/* ── Chips + filters ── */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px;align-items:center}
+.filter-label-sm{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.chip{background:var(--s2);border:1px solid var(--border);color:var(--muted2);font-family:var(--mono);font-size:10px;letter-spacing:0.5px;padding:5px 12px;cursor:pointer;text-transform:uppercase;transition:all 0.12s;white-space:nowrap}
+.chip:hover{border-color:var(--muted2);color:var(--text)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#000}
+.search-wrap{position:relative;margin-left:auto}
+.search-input{background:var(--s2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:6px 14px 6px 32px;width:220px;outline:none;transition:border-color 0.15s}
+.search-input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px;pointer-events:none}
+
+/* ── Product grid ── */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);margin-bottom:32px}
+.product-card{background:var(--s1);padding:20px;cursor:pointer;transition:background 0.15s;position:relative}
+.product-card:hover{background:var(--s2)}
+.product-card-set{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.product-card-player{font-family:var(--display);font-size:22px;letter-spacing:1px;margin-bottom:8px;line-height:1}
+.product-card-variant{display:inline-block;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 8px;border:1px solid;margin-bottom:12px}
+.product-card-price{font-family:var(--display);font-size:32px;color:var(--accent);line-height:1;margin-bottom:8px}
+.product-card-sub{display:flex;gap:12px;flex-wrap:wrap}
+.product-card-meta{font-size:9px;color:var(--muted);letter-spacing:0.5px}
+.product-card-meta span{color:var(--muted2)}
+.mult-badge{position:absolute;top:14px;right:14px;font-family:var(--display);font-size:11px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(232,255,71,0.3);padding:2px 7px;letter-spacing:1px}
+
+/* Variant colors */
+.v-fire{color:#ff4d00;border-color:#ff4d00}.v-chrome{color:#a8c7fa;border-color:#a8c7fa}
+.v-gold{color:#ffd700;border-color:#ffd700}.v-emerald{color:#3ddc84;border-color:#3ddc84}
+.v-vides{color:#b47aff;border-color:#b47aff}.v-victory{color:#ff9500;border-color:#ff9500}
+.v-base{color:#888;border-color:#888}.v-sp{color:#c084fc;border-color:#c084fc}
+
+/* ── Two/three col ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+.panel{background:var(--s1);border:1px solid var(--border);padding:20px}
+
+/* ── Variant avg bars ── */
+.variant-bars{display:flex;flex-direction:column;gap:10px}
+.vbar-row{display:flex;align-items:center;gap:10px}
+.vbar-label{width:60px;font-size:9px;text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
+.vbar-track{flex:1;height:6px;background:var(--s3);border-radius:1px;overflow:hidden}
+.vbar-fill{height:100%;border-radius:1px;transition:width 0.8s ease}
+.vbar-val{width:50px;text-align:right;font-family:var(--display);font-size:13px;color:var(--accent)}
+
+/* ── Sales feed ── */
+.sales-list{display:flex;flex-direction:column;gap:1px}
+.sale-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--s1);border-bottom:1px solid var(--border);transition:background 0.12s}
+.sale-row:hover{background:var(--s2)}
+.sale-img{width:36px;height:36px;object-fit:cover;flex-shrink:0;background:var(--s3)}
+.sale-info{flex:1;min-width:0}
+.sale-player{font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sale-meta{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:0.5px}
+.sale-price{font-family:var(--display);font-size:16px;color:var(--accent);flex-shrink:0}
+.sale-date{font-size:9px;color:var(--muted2);flex-shrink:0}
+
+/* ── Chart ── */
+.chart-container{position:relative;height:200px}
+
+/* ── Movers ── */
+.movers-table{width:100%;border-collapse:collapse;font-size:11px}
+.movers-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--border)}
+.movers-table td{padding:8px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+.movers-table tr:last-child td{border-bottom:none}
+.mover-name{color:var(--text);font-size:11px}
+.mover-up{color:var(--green);font-family:var(--display);font-size:13px}
+.mover-down{color:var(--red);font-family:var(--display);font-size:13px}
+.mover-spark{display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle}
+.mover-spark span{display:inline-block;width:6px;border-radius:1px}
+
+/* ── Power rankings ── */
+.power-grid{display:flex;flex-direction:column;gap:6px}
+.power-row{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)}
+.power-row:last-child{border-bottom:none}
+.power-rank{font-family:var(--display);font-size:18px;width:28px;text-align:center;color:var(--muted)}
+.power-rank.top3{color:var(--accent)}
+.power-info{flex:1;min-width:0}
+.power-name{font-size:12px;color:var(--text)}
+.power-meta{font-size:9px;color:var(--muted);margin-top:2px}
+.power-score-wrap{width:120px;flex-shrink:0}
+.power-score{font-family:var(--display);font-size:14px;color:var(--accent);text-align:right;margin-bottom:3px}
+.power-bar-bg{height:3px;background:var(--s3);border-radius:1px}
+.power-bar-fill{height:100%;background:var(--accent);border-radius:1px;opacity:0.6}
+
+/* ── Top players ── */
+.top-players-table{width:100%;border-collapse:collapse}
+.top-players-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 0 8px;text-align:left;border-bottom:1px solid var(--border)}
+.top-players-table td{padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;vertical-align:middle}
+.top-rank{color:var(--muted);font-family:var(--display);font-size:14px;width:24px}
+.top-player-name{color:var(--text)}
+.top-player-price{font-family:var(--display);font-size:15px}
+.top-player-bar-wrap{height:3px;background:var(--s3);border-radius:1px;width:80px}
+.top-player-bar{height:100%;border-radius:1px}
+
+/* ── Set×Variant table ── */
+.sv-table{width:100%;border-collapse:collapse;font-size:10px}
+.sv-table th{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:0 8px 8px 0;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.sv-table th:first-child{text-align:left}
+.sv-table td{padding:6px 8px 6px 0;border-bottom:1px solid var(--border);text-align:right;color:var(--muted2);font-family:var(--display);font-size:12px}
+.sv-table td:first-child{text-align:left;color:var(--text);font-family:var(--mono);font-size:9px}
+
+/* ── Misc ── */
+.league-tabs{display:flex;gap:4px;margin-bottom:16px}
+.loading-state{padding:60px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px}
+.loading-spinner{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:32px;text-align:center;color:var(--muted);font-size:11px}
+.error-banner{background:rgba(255,64,64,0.1);border:1px solid rgba(255,64,64,0.3);padding:12px 16px;color:#ff6b6b;font-size:11px;margin-bottom:24px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">ghost<em>write</em></div>
+  <div class="header-right">
+    <nav class="nav-links">
+      <a href="index.html" class="active">dashboard</a>
+      <a href="guide.html">price guide</a>
+      <a href="heatmap.html">heat map</a>
+      <a href="case-sim.html">case sim</a>
+    </nav>
+    <div class="live-badge"><div class="live-dot"></div>live</div>
+    <button class="refresh-btn" onclick="loadData()">↻ refresh</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <div id="error-wrap"></div>
+
+  <!-- Stat cards -->
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-label">Total Sales</div><div class="stat-value" id="stat-sales">—</div><div class="stat-sub">all-time verified</div></div>
+    <div class="stat-card"><div class="stat-label">Products Tracked</div><div class="stat-value" id="stat-products">—</div><div class="stat-sub">set · player · variant</div></div>
+    <div class="stat-card"><div class="stat-label">30d Volume</div><div class="stat-value" id="stat-30d">—</div><div class="stat-sub">sales last 30 days</div></div>
+    <div class="stat-card"><div class="stat-label">Avg Sale Price</div><div class="stat-value" id="stat-avg">—</div><div class="stat-sub">all-time across all variants</div></div>
+  </div>
+
+  <!-- Variant averages -->
+  <div class="section-label">variant averages</div>
+  <div class="league-tabs" id="variant-league-tabs">
+    <button class="chip active" data-league="ALL"  onclick="switchVariantLeague(this)">All</button>
+    <button class="chip"        data-league="NBA"  onclick="switchVariantLeague(this)">NBA</button>
+    <button class="chip"        data-league="WNBA" onclick="switchVariantLeague(this)">WNBA</button>
+    <button class="chip"        data-league="MLB"  onclick="switchVariantLeague(this)">MLB</button>
+  </div>
+  <div class="panel" style="margin-bottom:32px">
+    <div id="variant-bars"><div class="loading-state"><span class="loading-spinner">◌</span>loading...</div></div>
+  </div>
+
+  <!-- Chart + Set×Variant table -->
+  <div class="two-col">
+    <div>
+      <div class="section-label">sales volume · 12 months</div>
+      <div class="panel"><div class="chart-container"><canvas id="monthly-chart"></canvas></div></div>
+    </div>
+    <div>
+      <div class="section-label">avg price by set × variant</div>
+      <div class="panel" style="overflow-x:auto">
+        <div id="sv-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Movers + Top players -->
+  <div class="two-col">
+    <div>
+      <div class="section-label">biggest movers · last sale vs avg</div>
+      <div class="panel"><div id="movers-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
+    </div>
+    <div>
+      <div class="section-label">top players by gold avg</div>
+      <div class="panel"><div id="top-players-table"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- Power rankings + Recent sales -->
+  <div class="two-col">
+    <div>
+      <div class="section-label">power rankings · relative multiplier</div>
+      <div class="league-tabs" id="power-league-tabs">
+        <button class="chip active" data-league="ALL"  onclick="switchPowerLeague(this)">All</button>
+        <button class="chip"        data-league="NBA"  onclick="switchPowerLeague(this)">NBA</button>
+        <button class="chip"        data-league="WNBA" onclick="switchPowerLeague(this)">WNBA</button>
+        <button class="chip"        data-league="MLB"  onclick="switchPowerLeague(this)">MLB</button>
+      </div>
+      <div class="panel"><div id="power-rankings"><div class="loading-state"><span class="loading-spinner">◌</span></div></div></div>
+    </div>
+    <div>
+      <div class="section-label">recent sales</div>
+      <div id="recent-sales"><div class="loading-state"><span class="loading-spinner">◌</span>loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Product grid -->
+  <div class="section-label">all products</div>
+  <div class="filter-bar">
+    <div class="filter-group"><span class="filter-label-sm">set</span><div id="set-chips" class="filter-group"></div></div>
+    <div class="filter-group" style="margin-left:16px"><span class="filter-label-sm">variant</span><div id="variant-chips" class="filter-group"></div></div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" type="text" placeholder="search player..." oninput="onSearch(this.value)">
+    </div>
+  </div>
+  <div class="products-grid" id="products-grid">
+    <div class="loading-state" style="grid-column:1/-1"><span class="loading-spinner">◌</span>loading...</div>
+  </div>
+
+</div>
+
+<script>
+const SB_URL='https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY='sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function rpc(fn,p={}){const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:SB_H,body:JSON.stringify(p)});if(!r.ok)throw new Error(`${fn}: ${r.status}`);return r.json();}
+
+const VARIANT_ORDER=['Base','Victory','Vides','Emerald','Gold','Chrome','Fire','SP'];
+const VCOLORS={Fire:'#ff4d00',Chrome:'#a8c7fa',Gold:'#ffd700',Emerald:'#3ddc84',Vides:'#b47aff',Victory:'#ff9500',Base:'#888',SP:'#c084fc'};
+
+let allProducts=[],recentSales=[],activeSet='all',activeVariant='all',activeVarLeague='ALL',activePowerLeague='ALL',searchQuery='';
+let monthlyChart=null;
+
+async function loadData(){
+  try{
+    const[pi,sales]=await Promise.all([
+      rpc('get_price_intelligence'),
+      rpc('get_recent_sales',{limit_rows:300}),
+    ]);
+    allProducts=pi.filter(r=>r.player&&r.player!=='Unknown').map(r=>({
+      set:r.set_name,league:r.league||'',player:r.player,variant:r.variant,
+      totalSales:+r.total_sales||0,avgPrice:+r.avg_price||0,
+      lowPrice:+r.low_price||0,highPrice:+r.high_price||0,
+      avg30d:+r.avg_30d||0,sales30d:+r.sales_30d||0,
+      avg90d:+r.avg_90d||0,sales90d:+r.sales_90d||0,
+      lastSaleDate:r.last_sale_date||null,lastSalePrice:+r.last_sale_price||0,
+      retail:+r.retail_price||0,
+      multiplier:r.retail_price&&r.avg_price?Math.round(r.avg_price/r.retail_price*10)/10:0,
+    }));
+    recentSales=sales.filter(r=>r.player&&r.player!=='Unknown').map(r=>({
+      id:r.id,set:r.set_name,league:r.league||'',player:r.player,variant:r.variant,
+      price:+r.price||0,date:r.date,image:r.image_url,url:r.ebay_url,
+      afa:r.afa_grade,source:r.source,flagged:r.flagged,rowIndex:r.sheets_row_index,
+    }));
+    renderAll();
+  }catch(e){
+    document.getElementById('error-wrap').innerHTML=`<div class="error-banner">⚠ ${e.message}</div>`;
+  }
+}
+
+function renderAll(){
+  renderStats();
+  renderVariantBars(activeVarLeague);
+  renderMonthlySalesChart();
+  renderSVTable();
+  renderMovers();
+  renderTopPlayers();
+  renderPowerRankings(activePowerLeague);
+  renderRecentSales();
+  buildChips();
+  renderProducts();
+}
+
+function renderStats(){
+  const total=allProducts.reduce((s,p)=>s+p.totalSales,0);
+  const vol30=allProducts.reduce((s,p)=>s+p.sales30d,0);
+  const priced=allProducts.filter(p=>p.avgPrice>0);
+  const avg=priced.length?priced.reduce((s,p)=>s+p.avgPrice,0)/priced.length:0;
+  document.getElementById('stat-sales').textContent=total.toLocaleString();
+  document.getElementById('stat-products').textContent=allProducts.length.toLocaleString();
+  document.getElementById('stat-30d').textContent=vol30.toLocaleString();
+  document.getElementById('stat-avg').textContent=avg>0?'$'+Math.round(avg):'—';
+}
+
+function switchVariantLeague(btn){
+  document.querySelectorAll('#variant-league-tabs .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activeVarLeague=btn.dataset.league; renderVariantBars(activeVarLeague);
+}
+
+function renderVariantBars(league){
+  const f=league==='ALL'?allProducts:allProducts.filter(p=>leagueMatch(p,league));
+  const vm={};
+  f.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!vm[p.variant])vm[p.variant]={sum:0,cnt:0};vm[p.variant].sum+=p.avgPrice*p.totalSales;vm[p.variant].cnt+=p.totalSales;});
+  const ord=VARIANT_ORDER.filter(v=>vm[v]);
+  const maxV=Math.max(...ord.map(v=>vm[v].sum/vm[v].cnt));
+  document.getElementById('variant-bars').innerHTML=ord.length
+    ?`<div class="variant-bars">${ord.map(v=>{const avg=vm[v].sum/vm[v].cnt;const pct=Math.round(avg/maxV*100);const c=VCOLORS[v]||'#888';
+      return`<div class="vbar-row"><div class="vbar-label" style="color:${c}">${v}</div><div class="vbar-track"><div class="vbar-fill" style="width:${pct}%;background:${c}"></div></div><div class="vbar-val">$${Math.round(avg)}</div></div>`;
+    }).join('')}</div>`
+    :'<div class="empty">no data</div>';
+}
+
+function leagueMatch(p,league){const s=(p.league||p.set||'').toUpperCase();if(league==='NBA')return s.includes('NBA')&&!s.includes('WNBA');if(league==='WNBA')return s.includes('WNBA');if(league==='MLB')return s.includes('MLB');return true;}
+
+function renderMonthlySalesChart(){
+  const now=new Date();
+  const months=[];
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({label:d.toLocaleDateString('en-US',{month:'short'}),year:d.getFullYear(),month:d.getMonth(),count:0});}
+  recentSales.forEach(s=>{if(!s.date)return;const d=new Date(s.date);const m=months.find(x=>x.year===d.getFullYear()&&x.month===d.getMonth());if(m)m.count++;});
+  const ctx=document.getElementById('monthly-chart').getContext('2d');
+  if(monthlyChart)monthlyChart.destroy();
+  monthlyChart=new Chart(ctx,{type:'bar',data:{labels:months.map(m=>m.label),datasets:[{data:months.map(m=>m.count),backgroundColor:months.map((_,i)=>i===months.length-1?'#e8ff47':'rgba(232,255,71,0.25)'),borderRadius:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#161616',titleColor:'#e8ff47',bodyColor:'#999',callbacks:{label:c=>` ${c.raw} sales`}}},
+    scales:{x:{grid:{color:'#1e1e1e'},ticks:{color:'#666',font:{family:'DM Mono',size:9}}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#666',font:{family:'DM Mono',size:9}},beginAtZero:true}}}});
+}
+
+function renderSVTable(){
+  const sm={};
+  allProducts.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!sm[p.set])sm[p.set]={};if(!sm[p.set][p.variant])sm[p.set][p.variant]={sum:0,cnt:0};sm[p.set][p.variant].sum+=p.avgPrice*p.totalSales;sm[p.set][p.variant].cnt+=p.totalSales;});
+  const sets=Object.keys(sm);
+  const vars=VARIANT_ORDER.filter(v=>sets.some(s=>sm[s][v]));
+  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
+  document.getElementById('sv-table').innerHTML=`<table class="sv-table"><thead><tr><th>Set</th>${vars.map(v=>`<th style="color:${VCOLORS[v]||'#888'}">${v}</th>`).join('')}</tr></thead><tbody>${
+    sets.map(s=>`<tr><td>${shortSet(s)}</td>${vars.map(v=>sm[s][v]?`<td>$${Math.round(sm[s][v].sum/sm[s][v].cnt)}</td>`:`<td style="color:var(--muted2)">—</td>`).join('')}</tr>`).join('')
+  }</tbody></table>`;
+}
+
+function renderMovers(){
+  const el=document.getElementById('movers-table');
+  const elig=allProducts.filter(p=>p.totalSales>=2&&p.lastSalePrice>0&&p.avgPrice>0);
+  if(!elig.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
+  const wc=elig.map(p=>({...p,change:p.lastSalePrice-p.avgPrice,changePct:(p.lastSalePrice-p.avgPrice)/p.avgPrice*100}));
+  wc.sort((a,b)=>Math.abs(b.changePct)-Math.abs(a.changePct));
+  const top=wc.slice(0,10);
+  const spark=(avg,last)=>{const mx=Math.max(avg,last);const h1=Math.round(avg/mx*18),h2=Math.round(last/mx*18);const c=last>=avg?'#3ddc84':'#ff4040';return`<span class="mover-spark"><span style="height:${h1}px;background:var(--muted)"></span><span style="height:${h2}px;background:${c}"></span></span>`;};
+  el.innerHTML=`<table class="movers-table"><thead><tr><th>Player</th><th>Variant</th><th>Avg → Last</th><th>Chg</th><th></th></tr></thead><tbody>${top.map(p=>{const up=p.change>=0;const vc='v-'+(p.variant||'base').toLowerCase();const sn=p.set.replace('Game Face','').trim();return`<tr><td><div class="mover-name">${p.player}</div><div style="font-size:8px;color:var(--muted)">${sn}</div></td><td><span class="product-card-variant ${vc}" style="font-size:8px;padding:1px 5px">${p.variant}</span></td><td style="font-size:10px">$${Math.round(p.avgPrice)} → $${Math.round(p.lastSalePrice)}</td><td class="${up?'mover-up':'mover-down'}">${up?'▲':'▼'} ${Math.abs(p.changePct).toFixed(0)}%</td><td>${spark(p.avgPrice,p.lastSalePrice)}</td></tr>`;}).join('')}</tbody></table>`;
+}
+
+function renderTopPlayers(){
+  const el=document.getElementById('top-players-table');
+  const pm={};
+  allProducts.forEach(p=>{if(p.variant!=='Gold'||!p.avgPrice||!p.totalSales)return;if(!pm[p.player])pm[p.player]={sum:0,cnt:0};pm[p.player].sum+=p.avgPrice*p.totalSales;pm[p.player].cnt+=p.totalSales;});
+  const ranked=Object.entries(pm).map(([player,d])=>({player,avgPrice:Math.round(d.sum/d.cnt),totalSales:d.cnt})).filter(p=>p.avgPrice>0).sort((a,b)=>b.avgPrice-a.avgPrice).slice(0,10);
+  if(!ranked.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
+  const max=ranked[0].avgPrice;
+  el.innerHTML=`<table class="top-players-table"><thead><tr><th>#</th><th>Player</th><th>Avg Gold</th><th></th><th>Sales</th></tr></thead><tbody>${ranked.map((p,i)=>`<tr><td class="top-rank">${i+1}</td><td class="top-player-name">${p.player}</td><td class="top-player-price" style="color:#ffd700">$${p.avgPrice}</td><td><div class="top-player-bar-wrap"><div class="top-player-bar" style="width:${Math.round(p.avgPrice/max*100)}%;background:#ffd700"></div></div></td><td>${p.totalSales}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function switchPowerLeague(btn){
+  document.querySelectorAll('#power-league-tabs .chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); activePowerLeague=btn.dataset.league; renderPowerRankings(activePowerLeague);
+}
+
+function renderPowerRankings(league){
+  const el=document.getElementById('power-rankings');
+  const f=league==='ALL'?allProducts:allProducts.filter(p=>leagueMatch(p,league));
+  const vp={};f.forEach(p=>{if(!p.avgPrice||!p.totalSales)return;if(!vp[p.variant])vp[p.variant]=[];vp[p.variant].push(p.avgPrice);});
+  const vm={};Object.entries(vp).forEach(([v,prices])=>{const s=[...prices].sort((a,b)=>a-b);const mid=Math.floor(s.length/2);vm[v]=s.length%2!==0?s[mid]:(s[mid-1]+s[mid])/2;});
+  const pm={};f.forEach(p=>{if(!p.avgPrice||!p.totalSales||!vm[p.variant])return;const mult=p.avgPrice/vm[p.variant];if(!pm[p.player])pm[p.player]={mults:[],sets:new Set(),sales:0};pm[p.player].mults.push(mult);pm[p.player].sets.add(p.set);pm[p.player].sales+=p.totalSales;});
+  const ranked=Object.entries(pm).map(([player,d])=>({player,score:d.mults.reduce((a,b)=>a+b,0)/d.mults.length,sets:[...d.sets],sales:d.sales})).filter(p=>p.score>0).sort((a,b)=>b.score-a.score).slice(0,20);
+  if(!ranked.length){el.innerHTML='<div class="empty">not enough data yet</div>';return;}
+  const mx=ranked[0].score;
+  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
+  el.innerHTML=`<div class="power-grid">${ranked.map((p,i)=>{const pct=Math.round(p.score/mx*100);const sl=p.sets.length===1?shortSet(p.sets[0]):p.sets.length+' sets';return`<div class="power-row"><div class="power-rank ${i<3?'top3':''}">${i+1}</div><div class="power-info"><div class="power-name">${p.player}</div><div class="power-meta">${sl} · ${p.sales} sales</div></div><div class="power-score-wrap"><div class="power-score">${p.score.toFixed(2)}x</div><div class="power-bar-bg"><div class="power-bar-fill" style="width:${pct}%"></div></div></div></div>`;}).join('')}</div>`;
+}
+
+function renderRecentSales(){
+  const el=document.getElementById('recent-sales');
+  const top=recentSales.slice(0,20);
+  if(!top.length){el.innerHTML='<div class="empty">no recent sales</div>';return;}
+  el.innerHTML=`<div class="sales-list">${top.map(s=>{const ds=s.date?new Date(s.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';const vc='v-'+(s.variant||'base').toLowerCase();const sn=s.set.replace('Game Face','').trim();const img=s.image?`<img class="sale-img" src="${s.image}" loading="lazy" onerror="this.style.opacity='0'">`:`<div class="sale-img" style="display:flex;align-items:center;justify-content:center;font-size:14px;opacity:0.3">👻</div>`;return`<div class="sale-row">${img}<div class="sale-info"><div class="sale-player">${s.player}</div><div class="sale-meta"><span class="product-card-variant ${vc}" style="font-size:7px;padding:1px 5px;margin-right:5px">${s.variant}</span>${sn}</div></div><div class="sale-price">$${Math.round(s.price)}</div><div class="sale-date">${ds}</div></div>`;}).join('')}</div>`;
+}
+
+function buildChips(){
+  const sets=[...new Set(allProducts.map(p=>p.set))].sort();
+  const vars=VARIANT_ORDER.filter(v=>allProducts.some(p=>p.variant===v));
+  const shortSet=s=>s.replace('Game Face','').replace('2024-25','').replace('2025-26','').replace('2025','').trim();
+  document.getElementById('set-chips').innerHTML=`<button class="chip ${activeSet==='all'?'active':''}" onclick="filterSet('all')">All</button>`+sets.map(s=>`<button class="chip ${activeSet===s?'active':''}" onclick="filterSet(${JSON.stringify(s)})">${shortSet(s)}</button>`).join('');
+  document.getElementById('variant-chips').innerHTML=`<button class="chip ${activeVariant==='all'?'active':''}" onclick="filterVariant('all')">All</button>`+vars.map(v=>`<button class="chip ${activeVariant===v?'active':''}" style="${activeVariant===v?'':'color:'+VCOLORS[v]}" onclick="filterVariant(${JSON.stringify(v)})">${v}</button>`).join('');
+}
+
+function filterSet(s){activeSet=s;buildChips();renderProducts();}
+function filterVariant(v){activeVariant=v;buildChips();renderProducts();}
+function onSearch(q){searchQuery=q.toLowerCase().trim();renderProducts();}
+
+function renderProducts(){
+  let f=allProducts;
+  if(activeSet!=='all')f=f.filter(p=>p.set===activeSet);
+  if(activeVariant!=='all')f=f.filter(p=>p.variant===activeVariant);
+  if(searchQuery)f=f.filter(p=>p.player.toLowerCase().includes(searchQuery));
+  f.sort((a,b)=>(b.avgPrice||0)-(a.avgPrice||0));
+  const grid=document.getElementById('products-grid');
+  if(!f.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1">no products match these filters</div>';return;}
+  grid.innerHTML=f.map(p=>{const vc='v-'+(p.variant||'base').toLowerCase();const mult=p.multiplier>0?p.multiplier.toFixed(1)+'x':'';const ls=p.lastSaleDate?new Date(p.lastSaleDate).toLocaleDateString('en-US',{month:'short',day:'numeric'}):'—';return`<div class="product-card" onclick="location.href='guide.html'">${mult?`<div class="mult-badge">${mult}</div>`:''}<div class="product-card-set">${p.set}</div><div class="product-card-player">${p.player}</div><span class="product-card-variant ${vc}">${p.variant}</span><div class="product-card-price">${p.avgPrice?'$'+Math.round(p.avgPrice):'—'}</div><div class="product-card-sub"><div class="product-card-meta"># sales <span>${p.totalSales||0}</span></div><div class="product-card-meta">last <span>${ls}</span></div>${p.retail?`<div class="product-card-meta">retail <span>$${Math.round(p.retail)}</span></div>`:''}</div></div>`;}).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>

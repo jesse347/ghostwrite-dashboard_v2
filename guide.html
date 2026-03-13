@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ghostwrite · price guide</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;--surf1:#111;--surf2:#181818;--border:#242424;--border2:#1a1a1a;
+  --accent:#e8ff47;--text:#f0f0f0;--muted:#888;--muted2:#555;
+  --display:'DM Mono',monospace;--body:'DM Sans',sans-serif;
+  --fire:#ff4d00;--chrome:#a8c7fa;--gold:#ffd700;--emerald:#3ddc84;
+  --vides:#b47aff;--victory:#ff9500;--base:#888;--sp:#c084fc;--flag-red:#ff4040;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:13px;min-height:100vh}
+.header{padding:20px 32px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:var(--display);font-size:18px;color:var(--accent);letter-spacing:-0.5px;text-decoration:none}
+.logo span{color:var(--muted);font-size:12px;margin-left:10px;letter-spacing:2px;text-transform:uppercase}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;transition:color 0.15s}
+.nav-links a:hover{color:var(--text)}.nav-links a.active{color:var(--accent)}
+.page{display:flex;height:calc(100vh - 65px);overflow:hidden}
+.product-list{flex:1;overflow-y:auto;padding:24px 32px;transition:flex 0.25s ease}
+.product-list.drawer-open{flex:0 0 55%}
+.filter-row{display:flex;gap:10px;align-items:center;margin-bottom:20px;flex-wrap:wrap}
+.filter-row input{background:var(--surf1);border:1px solid var(--border);color:var(--text);font-family:var(--display);font-size:11px;padding:7px 12px;width:200px;outline:none}
+.filter-row input:focus{border-color:var(--accent)}
+.filter-row input::placeholder{color:var(--muted2)}
+.chip{background:var(--surf1);border:1px solid var(--border);color:var(--muted);font-family:var(--display);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 10px;cursor:pointer;transition:all 0.15s}
+.chip:hover{color:var(--text);border-color:var(--muted)}.chip.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.result-count{color:var(--muted);font-family:var(--display);font-size:10px;margin-left:auto}
+.guide-table{width:100%;border-collapse:collapse}
+.guide-table thead th{font-family:var(--display);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);text-align:left;padding:0 12px 10px 0;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+.guide-table thead th:hover{color:var(--text)}
+.guide-table thead th.sort-asc::after{content:' ▲';color:var(--accent)}
+.guide-table thead th.sort-desc::after{content:' ▼';color:var(--accent)}
+.guide-table tbody tr{border-bottom:1px solid var(--border2);cursor:pointer;transition:background 0.1s}
+.guide-table tbody tr:hover{background:var(--surf1)}
+.guide-table tbody tr.selected{background:var(--surf2);border-left:2px solid var(--accent)}
+.guide-table td{padding:10px 12px 10px 0;font-size:12px;color:var(--muted2);vertical-align:middle}
+.td-player{color:var(--text)!important;font-weight:500}.td-set{font-size:9px;color:var(--muted)!important;letter-spacing:0.5px}
+.td-price{font-family:var(--display);font-size:16px;color:var(--accent)!important}
+.td-last{font-family:var(--display);font-size:13px;color:var(--text)!important}
+.td-sales{font-family:var(--display);font-size:12px}
+.v-tag{display:inline-block;font-size:7px;letter-spacing:1.5px;text-transform:uppercase;padding:2px 6px;border:1px solid}
+.v-fire{color:var(--fire);border-color:var(--fire)}.v-chrome{color:var(--chrome);border-color:var(--chrome)}
+.v-gold{color:var(--gold);border-color:var(--gold)}.v-emerald{color:var(--emerald);border-color:var(--emerald)}
+.v-vides{color:var(--vides);border-color:var(--vides)}.v-victory{color:var(--victory);border-color:var(--victory)}
+.v-base{color:var(--base);border-color:var(--base)}.v-sp{color:var(--sp);border-color:var(--sp)}
+.drawer{width:0;overflow:hidden;border-left:1px solid var(--border);background:var(--surf1);transition:width 0.25s ease;display:flex;flex-direction:column}
+.drawer.open{width:45%;min-width:400px}
+.drawer-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.drawer-title{font-family:var(--display);font-size:13px;color:var(--text);line-height:1.4}
+.drawer-subtitle{font-size:10px;color:var(--muted);margin-top:3px}
+.drawer-close{background:none;border:1px solid var(--border);color:var(--muted);width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0}
+.drawer-close:hover{border-color:var(--text);color:var(--text)}
+.drawer-stats{display:flex;gap:20px;padding:14px 24px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.drawer-stat-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.drawer-stat-value{font-family:var(--display);font-size:18px;color:var(--accent)}
+.drawer-listings{flex:1;overflow-y:auto;padding:16px 24px}
+.listing-card{display:flex;gap:12px;padding:12px;margin-bottom:10px;background:var(--bg);border:1px solid var(--border);transition:border-color 0.15s}
+.listing-card:hover{border-color:var(--muted2)}.listing-card.flagged{border-color:var(--flag-red)!important}
+.listing-img{width:64px;height:64px;object-fit:cover;flex-shrink:0;background:var(--surf2)}
+.listing-img-ph{width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:var(--surf2);flex-shrink:0;font-size:22px;opacity:0.5}
+.listing-body{flex:1;min-width:0}
+.listing-price{font-family:var(--display);font-size:18px;color:var(--accent)}
+.listing-date{font-size:9px;color:var(--muted)}
+.listing-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:5px}
+.listing-link{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;text-decoration:none;border:1px solid var(--border);padding:2px 7px;transition:all 0.15s}
+.listing-link:hover{color:var(--accent);border-color:var(--accent)}
+.afa-badge{font-size:9px;color:#ffd700}
+.listing-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.flag-btn{background:none;border:1px solid var(--border);color:var(--muted);font-family:var(--display);font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:4px 8px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.flag-btn:hover{border-color:var(--flag-red);color:var(--flag-red)}.flag-btn.flagged{background:var(--flag-red);border-color:var(--flag-red);color:#fff}
+.loading{padding:60px;text-align:center;color:var(--muted);font-size:11px;letter-spacing:1px}
+.spin{display:inline-block;animation:spin 1s linear infinite;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{padding:40px;text-align:center;color:var(--muted);font-size:11px}
+</style>
+</head>
+<body>
+<div class="header">
+  <a class="logo" href="index.html">ghostwrite <span>price guide</span></a>
+  <nav class="nav-links">
+    <a href="index.html">dashboard</a>
+    <a href="guide.html" class="active">price guide</a>
+    <a href="heatmap.html">heat map</a>
+    <a href="case-sim.html">case sim</a>
+  </nav>
+</div>
+<div class="page">
+  <div class="product-list" id="product-list">
+    <div class="filter-row">
+      <input type="text" placeholder="search player..." oninput="onSearch(this.value)">
+      <div id="set-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div id="var-chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      <div class="result-count" id="result-count"></div>
+    </div>
+    <div id="table-wrap"><div class="loading"><span class="spin">◌</span>loading...</div></div>
+  </div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div><div class="drawer-title" id="d-title">—</div><div class="drawer-subtitle" id="d-sub">—</div></div>
+      <button class="drawer-close" onclick="closeDrawer()">✕</button>
+    </div>
+    <div class="drawer-stats" id="d-stats"></div>
+    <div class="drawer-listings" id="d-listings"><div class="empty">select a product to see listings</div></div>
+  </div>
+</div>
+
+<script>
+const SB_URL='https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY='sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H={'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+async function rpc(fn,p={}){const r=await fetch(`${SB_URL}/rest/v1/rpc/${fn}`,{method:'POST',headers:SB_H,body:JSON.stringify(p)});if(!r.ok)throw new Error(`${fn}: ${r.status}`);return r.json();}
+async function sbPatch(table,match,data){const qs=Object.entries(match).map(([k,v])=>`${k}=eq.${encodeURIComponent(v)}`).join('&');const r=await fetch(`${SB_URL}/rest/v1/${table}?${qs}`,{method:'PATCH',headers:{...SB_H,'Prefer':'return=minimal'},body:JSON.stringify(data)});if(!r.ok)throw new Error(`PATCH ${r.status}`);}
+
+const VORD=['Base','Victory','Vides','Emerald','Gold','Chrome','Fire','SP'];
+const VCOL={Fire:'#ff4d00',Chrome:'#a8c7fa',Gold:'#ffd700',Emerald:'#3ddc84',Vides:'#b47aff',Victory:'#ff9500',Base:'#888',SP:'#c084fc'};
+let all=[],filtered=[],selected=null,sortCol='avgPrice',sortDir='desc',q='',activeSet='all',activeVar='all';
+
+async function loadData(){
+  try{
+    const pi=await rpc('get_price_intelligence');
+    all=pi.filter(r=>r.player&&r.player!=='Unknown').map(r=>({
+      set:r.set_name,player:r.player,variant:r.variant,
+      totalSales:+r.total_sales||0,avgPrice:+r.avg_price||0,
+      avg30d:+r.avg_30d||0,sales30d:+r.sales_30d||0,
+      avg90d:+r.avg_90d||0,sales90d:+r.sales_90d||0,
+      lastSaleDate:r.last_sale_date,lastSalePrice:+r.last_sale_price||0,
+    }));
+    buildChips();applyFilters();
+  }catch(e){document.getElementById('table-wrap').innerHTML=`<div class="empty">⚠ ${e.message}</div>`;}
+}
+
+function buildChips(){
+  const sets=[...new Set(all.map(p=>p.set))].sort();
+  const vars=VORD.filter(v=>all.some(p=>p.variant===v));
+  const sh=s=>s.replace('Game Face','').replace(/20\d\d-?\d\d/g,'').replace('2025','').trim();
+  document.getElementById('set-chips').innerHTML=
+    `<button class="chip ${activeSet==='all'?'active':''}" onclick="filterSet('all')">All sets</button>`+
+    sets.map(s=>`<button class="chip ${activeSet===s?'active':''}" onclick="filterSet(${JSON.stringify(s)})">${sh(s)}</button>`).join('');
+  document.getElementById('var-chips').innerHTML=
+    `<button class="chip ${activeVar==='all'?'active':''}" onclick="filterVar('all')">All variants</button>`+
+    vars.map(v=>`<button class="chip ${activeVar===v?'active':''}" style="${activeVar===v?'':'color:'+VCOL[v]}" onclick="filterVar(${JSON.stringify(v)})">${v}</button>`).join('');
+}
+
+function filterSet(s){activeSet=s;buildChips();applyFilters();}
+function filterVar(v){activeVar=v;buildChips();applyFilters();}
+function onSearch(val){q=val.toLowerCase().trim();applyFilters();}
+
+function applyFilters(){
+  filtered=all;
+  if(activeSet!=='all')filtered=filtered.filter(p=>p.set===activeSet);
+  if(activeVar!=='all')filtered=filtered.filter(p=>p.variant===activeVar);
+  if(q)filtered=filtered.filter(p=>p.player.toLowerCase().includes(q)||p.set.toLowerCase().includes(q));
+  filtered=[...filtered].sort((a,b)=>{const av=a[sortCol]??0,bv=b[sortCol]??0;return typeof av==='string'?(sortDir==='asc'?av.localeCompare(bv):bv.localeCompare(av)):(sortDir==='asc'?av-bv:bv-av);});
+  document.getElementById('result-count').textContent=`${filtered.length} results`;
+  renderTable();
+}
+
+function sortBy(col){sortCol===col?(sortDir=sortDir==='desc'?'asc':'desc'):(sortCol=col,sortDir='desc');applyFilters();}
+
+function renderTable(){
+  const cols=[{key:'player',label:'Player'},{key:'variant',label:'Variant'},{key:'avgPrice',label:'Avg Price'},{key:'lastSalePrice',label:'Last Sale'},{key:'totalSales',label:'Sales'},{key:'sales30d',label:'30d'}];
+  const th=cols.map(c=>`<th class="${sortCol===c.key?'sort-'+sortDir:''}" onclick="sortBy('${c.key}')">${c.label}</th>`).join('');
+  const tb=filtered.map(p=>{
+    const vc='v-'+(p.variant||'base').toLowerCase();
+    const sel=selected&&selected.set===p.set&&selected.player===p.player&&selected.variant===p.variant;
+    return`<tr class="${sel?'selected':''}" onclick="openDrawer(${JSON.stringify(p).replace(/"/g,'&quot;')})"><td><div class="td-player">${p.player}</div><div class="td-set">${p.set}</div></td><td><span class="v-tag ${vc}">${p.variant}</span></td><td class="td-price">${p.avgPrice?'$'+Math.round(p.avgPrice):'—'}</td><td class="td-last">${p.lastSalePrice?'$'+Math.round(p.lastSalePrice):'—'}</td><td class="td-sales">${p.totalSales||0}</td><td class="td-sales">${p.sales30d||0}</td></tr>`;
+  }).join('');
+  document.getElementById('table-wrap').innerHTML=`<table class="guide-table"><thead><tr>${th}</tr></thead><tbody>${tb||'<tr><td colspan="6"><div class="empty">no products match</div></td></tr>'}</tbody></table>`;
+}
+
+async function openDrawer(product){
+  selected=product;applyFilters();
+  const vc='v-'+(product.variant||'base').toLowerCase();
+  document.getElementById('d-title').innerHTML=`${product.player} <span class="v-tag ${vc}" style="margin-left:6px">${product.variant}</span>`;
+  document.getElementById('d-sub').textContent=product.set;
+  document.getElementById('d-stats').innerHTML=`
+    <div><div class="drawer-stat-label">Avg</div><div class="drawer-stat-value">${product.avgPrice?'$'+Math.round(product.avgPrice):'—'}</div></div>
+    <div><div class="drawer-stat-label">Last</div><div class="drawer-stat-value">${product.lastSalePrice?'$'+Math.round(product.lastSalePrice):'—'}</div></div>
+    <div><div class="drawer-stat-label">30d Avg</div><div class="drawer-stat-value">${product.avg30d?'$'+Math.round(product.avg30d):'—'}</div></div>
+    <div><div class="drawer-stat-label">Sales</div><div class="drawer-stat-value">${product.totalSales||0}</div></div>
+    <div><div class="drawer-stat-label">30d</div><div class="drawer-stat-value">${product.sales30d||0}</div></div>`;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('product-list').classList.add('drawer-open');
+  document.getElementById('d-listings').innerHTML='<div class="loading"><span class="spin">◌</span>loading...</div>';
+  try{
+    const ls=await rpc('get_sales_by_combo',{p_set_name:product.set,p_player:product.player,p_variant:product.variant});
+    document.getElementById('d-listings').innerHTML=ls.length?ls.map(listingCard).join(''):'<div class="empty">no sales recorded yet</div>';
+  }catch(e){document.getElementById('d-listings').innerHTML=`<div class="empty">⚠ ${e.message}</div>`;}
+}
+
+function closeDrawer(){selected=null;document.getElementById('drawer').classList.remove('open');document.getElementById('product-list').classList.remove('drawer-open');applyFilters();}
+
+function listingCard(l){
+  const ds=l.date?new Date(l.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):'—';
+  const img=l.image_url?`<img class="listing-img" src="${l.image_url}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="listing-img-ph" style="display:none">👻</div>`:`<div class="listing-img-ph">👻</div>`;
+  return`<div class="listing-card ${l.flagged?'flagged':''}" id="lc-${l.id}">${img}
+    <div class="listing-body">
+      <div class="listing-meta">
+        <span class="listing-price">$${Math.round(l.price)}</span>
+        <span class="listing-date">${ds}</span>
+        ${l.afa_grade?`<span class="afa-badge">🏆 ${l.afa_grade}</span>`:''}
+        ${l.ebay_url?`<a class="listing-link" href="${l.ebay_url}" target="_blank" rel="noopener">↗ view</a>`:''}
+      </div>
+    </div>
+    <div class="listing-actions"><button class="flag-btn ${l.flagged?'flagged':''}" onclick="toggleFlag(event,'${l.id}',${!!l.flagged})">${l.flagged?'⚑ flagged':'flag'}</button></div>
+  </div>`;
+}
+
+async function toggleFlag(e,id,cur){
+  e.stopPropagation();
+  const nf=!cur;
+  const card=document.getElementById('lc-'+id);
+  const btn=card.querySelector('.flag-btn');
+  nf?(card.classList.add('flagged'),btn.classList.add('flagged'),btn.textContent='⚑ flagged'):(card.classList.remove('flagged'),btn.classList.remove('flagged'),btn.textContent='flag');
+  try{await sbPatch('sales',{id},{flagged:nf});}catch(err){
+    nf?(card.classList.remove('flagged'),btn.classList.remove('flagged'),btn.textContent='flag'):(card.classList.add('flagged'),btn.classList.add('flagged'),btn.textContent='⚑ flagged');
+    console.error('Flag failed:',err);
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
