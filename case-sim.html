@@ -103,6 +103,7 @@ body { color: var(--text); font-family: var(--mono); font-size: 12px; }
   transition: border-color 0.2s, background 0.2s;
   cursor: default;
 }
+.box-slot.populated { animation: reveal 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 .box-slot.is-hit { cursor: pointer; }
 .box-slot.is-hit:hover { filter: brightness(1.12); }
 
@@ -252,6 +253,66 @@ body { color: var(--text); font-family: var(--mono); font-size: 12px; }
   .nav { padding: 12px 16px; }
   .drawer { width: 100%; }
 }
+
+/* ── Distribution chart (500-case mode) ─────────────────────────────────── */
+.dist-svg { width: 100%; overflow: visible; display: block; }
+.chart-area { padding: 28px 24px 20px; position: relative; min-height: 280px; }
+.chart-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 220px; gap: 12px;
+}
+.chart-empty-icon { font-size: 32px; opacity: 0.08; }
+.chart-empty-text { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.chart-legend {
+  display: flex; gap: 20px; padding: 0 24px 20px; flex-wrap: wrap; align-items: center;
+}
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 1px; flex-shrink: 0; }
+.legend-divider { width: 1px; height: 14px; background: var(--muted2); }
+.sim-summary {
+  border-top: 1px solid var(--border); padding: 16px 24px;
+  display: none; align-items: center; gap: 32px; flex-wrap: wrap;
+}
+.sim-summary.visible { display: flex; }
+.sim-sum-label { font-size: 7px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.sim-sum-val { font-family: var(--display); font-size: 20px; font-weight: 700; }
+.sim-sum-val.green { color: var(--green); }
+.sim-sum-val.red   { color: var(--red); }
+.sim-sum-note { font-size: 8px; color: var(--muted); margin-left: auto; line-height: 1.7; text-align: right; }
+/* Bin colors */
+:root {
+  --bin-real:  #e8ff47;
+  --bin-mixed: #ffb347;
+  --bin-est:   #7c6fff;
+}
+.chart-tooltip {
+  position: fixed; pointer-events: none; z-index: 200;
+  background: var(--s2); border: 1px solid var(--border);
+  padding: 10px 14px; min-width: 160px;
+  opacity: 0; transition: opacity 0.1s;
+}
+.chart-tooltip.visible { opacity: 1; }
+.tt-val { font-family: var(--display); font-size: 16px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.tt-row { font-size: 8px; color: var(--muted); margin-bottom: 2px; letter-spacing: 0.5px; }
+.tt-row span { color: var(--text); }
+/* Two-button sim controls */
+.sim-btn-open {
+  font-family: var(--display); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 22px; cursor: pointer;
+  background: var(--accent); color: #000; border: none; transition: all 0.15s;
+}
+.sim-btn-open:hover { background: #fff; }
+.sim-btn-open:disabled { background: var(--s3); color: var(--muted); cursor: not-allowed; }
+.sim-btn-500 {
+  font-family: var(--display); font-size: 11px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 10px 22px; cursor: pointer;
+  background: transparent; color: var(--accent);
+  border: 1px solid var(--accent); transition: all 0.15s;
+}
+.sim-btn-500:hover { background: rgba(232,255,71,0.1); }
+.sim-btn-500:disabled { border-color: var(--muted2); color: var(--muted); cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -269,7 +330,7 @@ body { color: var(--text); font-family: var(--mono); font-size: 12px; }
 <div class="page">
   <div class="page-header">
     <div class="page-title">case <em>simulator</em></div>
-    <div class="page-sub">guaranteed hit mechanic · real + projected values · click any hit to inspect</div>
+    <div class="page-sub">open one case · or run 500 monte carlo simulations · click any hit to inspect</div>
   </div>
   <div id="main-content">
     <div class="loading-state">
@@ -353,6 +414,17 @@ let activeSet = null;
 let simHistory = [];
 let isAnimating = false;
 let lastPulls = [];
+// 500-case mode state
+let simResults  = [];
+let selectedBin = null;
+let activePulls500 = null;
+const N_SIMS   = 500;
+const BIN_SIZE = 25;
+// Confidence interval CV (price variance by data quality)
+const CONF_CV = {
+  'real': 0.12, 'High': 0.18, 'Medium': 0.30,
+  'Medium-Low': 0.40, 'Low': 0.55, 'Very Low': 0.70, 'set-avg': 0.50,
+};
 
 // ── Load ─────────────────────────────────────────────────────────────────────
 async function loadData() {
@@ -421,14 +493,44 @@ function renderPage(sets) {
     <div class="stats-row" id="stats-row"></div>
     <div class="sim-area">
       <div class="sim-header">
-        <div class="sim-title">open a case</div>
+        <div class="sim-title" id="sim-title">open a case</div>
         <div class="sim-controls">
-          <button class="reset-btn" onclick="resetSim()">reset</button>
-          <button class="pull-btn" id="pull-btn" onclick="runSimulation()">▶ open case</button>
+          <button class="reset-btn" onclick="resetAll()">reset</button>
+          <button class="sim-btn-500" id="btn-500" onclick="run500()">◈ open 500 cases</button>
+          <button class="sim-btn-open" id="btn-one" onclick="runSimulation()">▶ open a case</button>
         </div>
       </div>
-      <div class="case-grid" id="case-grid"></div>
-      <div class="result-bar" id="result-bar"></div>
+      <!-- Single-case grid (shown in open-one mode) -->
+      <div id="single-case-wrap">
+        <div class="case-grid" id="case-grid"></div>
+        <div class="result-bar" id="result-bar"></div>
+      </div>
+      <!-- Distribution chart (shown in 500-case mode) -->
+      <div id="dist-wrap" style="display:none">
+        <div class="chart-area" id="chart-area">
+          <div class="chart-empty">
+            <div class="chart-empty-icon">◈</div>
+            <div class="chart-empty-text">running simulations...</div>
+          </div>
+        </div>
+        <div class="chart-legend" id="chart-legend" style="display:none">
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-real)"></div>all real data</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-mixed)"></div>mixed</div>
+          <div class="legend-item"><div class="legend-swatch" style="background:var(--bin-est)"></div>mostly projected</div>
+          <div class="legend-divider"></div>
+          <div class="legend-item"><div style="width:10px;height:2px;background:var(--accent);border-radius:1px"></div>retail price</div>
+          <div class="legend-item"><div style="width:10px;height:2px;background:rgba(232,255,71,0.3);border-radius:1px"></div>p10 · median · p90</div>
+        </div>
+        <div class="sim-summary" id="sim-summary"></div>
+        <!-- Case grid populated when bar is clicked -->
+        <div id="dist-case-section" style="display:none">
+          <div style="padding:12px 0 8px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);border-top:1px solid var(--border);margin-top:4px">
+            case breakdown · <span id="dist-case-meta" style="color:var(--muted2)">click a bar to inspect</span>
+          </div>
+          <div class="case-grid" id="dist-case-grid"></div>
+        </div>
+      </div>
+      <!-- Prob row: hidden after sim runs -->
       <div class="prob-row" id="prob-row"></div>
     </div>
     <div class="history-section" id="history-section" style="display:none">
@@ -445,21 +547,16 @@ function renderPage(sets) {
 }
 
 function renderSetSelector(sets) {
-  document.getElementById('set-selector').innerHTML = sets.map(s => {
-    const shortName = s
-      .replace('Game Face','').replace('2024-25','24-25').replace('2025-26','25-26')
-      .replace('2024','').replace('2025','').replace('2026','')
-      .trim().replace(/\s+/g,' ') || s;
-    return `<button class="set-btn ${s===activeSet?'active':''}" onclick="switchSet('${s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
-      ${shortName}
-    </button>`;
-  }).join('');
+  document.getElementById('set-selector').innerHTML = sets.map(s =>
+    `<button class="set-btn ${s===activeSet?'active':''}" onclick="switchSet('${s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      ${s.toUpperCase()}
+    </button>`
+  ).join('');
 }
 
 function switchSet(s) {
-  activeSet = s; simHistory = []; lastPulls = [];
-  const allSetNames = [...new Set((allData.products||[])
-    .filter(p => p.player && p.player!=='Unknown' && p.set).map(p=>p.set))];
+  activeSet = s; simHistory = []; lastPulls = []; simResults = [];
+  selectedBin = null; activePulls500 = null;
   const setsWithMath2 = Object.keys(allData.setMath || {});
   const setsWithPI2   = [...new Set((allData.products||[])
     .filter(p => p.player && p.player!=='Unknown' && p.set).map(p=>p.set))];
@@ -468,6 +565,7 @@ function switchSet(s) {
   );
   renderSetSelector(sets2);
   renderStats(); renderEmptyGrid(); renderProbabilities();
+  showSingleCaseMode();
   document.getElementById('result-bar').classList.remove('visible');
   document.getElementById('history-section').style.display = 'none';
 }
@@ -773,7 +871,11 @@ function bestPriceFull(p) {
 function runSimulation() {
   if (isAnimating) return;
   isAnimating = true;
-  document.getElementById('pull-btn').disabled = true;
+  showSingleCaseMode();
+  document.getElementById('prob-row').style.display = 'none';
+  const b1 = document.getElementById('btn-one'), b5 = document.getElementById('btn-500');
+  if(b1) b1.disabled = true;
+  if(b5) b5.disabled = true;
 
   const cfg = getSetConfig(activeSet)||{casePrice:500,casePack:12,hitRatio:1.02};
   const { hitPool, remainingPool } = buildSplitPools(activeSet);
@@ -781,17 +883,12 @@ function runSimulation() {
   if (!hitPool.length) {
     alert('Not enough parallel data to simulate this set yet.');
     isAnimating = false;
-    document.getElementById('pull-btn').disabled = false;
+    enableBtns();
     return;
   }
 
   const pulls = [];
-
-  // Slot 0 — GUARANTEED HIT from parallel-only pool
   pulls.push({ ...hitPool[Math.floor(Math.random()*hitPool.length)], slotIndex:0, isGuaranteed:true });
-
-  // Slots 1–(n-1) — remaining pool after 1 parallel allocated per case
-  // Base cards dominate; leftover parallels make second hits correctly rare (~2%)
   for (let i=1; i<cfg.casePack; i++) {
     pulls.push({ ...remainingPool[Math.floor(Math.random()*remainingPool.length)], slotIndex:i, isGuaranteed:false });
   }
@@ -805,7 +902,7 @@ function runSimulation() {
         setTimeout(() => {
           showResults(pulls, cfg);
           isAnimating = false;
-          document.getElementById('pull-btn').disabled = false;
+          enableBtns();
         }, 300);
       }
     }, i*110);
@@ -1027,9 +1124,251 @@ function resetSim() {
   document.getElementById('result-bar').classList.remove('visible');
   document.getElementById('history-section').style.display='none';
   isAnimating=false;
-  document.getElementById('pull-btn').disabled=false;
+  enableBtns();
   closeDrawer();
 }
+
+function resetAll() {
+  simResults=[]; selectedBin=null; activePulls500=null;
+  resetSim();
+  showSingleCaseMode();
+}
+
+function showSingleCaseMode() {
+  document.getElementById('single-case-wrap').style.display = '';
+  document.getElementById('dist-wrap').style.display = 'none';
+  document.getElementById('prob-row').style.display = '';
+  const t = document.getElementById('sim-title'); if(t) t.textContent = 'open a case';
+}
+
+function showDistMode() {
+  document.getElementById('single-case-wrap').style.display = 'none';
+  document.getElementById('dist-wrap').style.display = '';
+  document.getElementById('prob-row').style.display = 'none';
+  const t = document.getElementById('sim-title'); if(t) t.textContent = 'outcome distribution · 500 simulations';
+}
+
+function enableBtns() {
+  const b1 = document.getElementById('btn-one'), b5 = document.getElementById('btn-500');
+  if(b1) { b1.disabled=false; b1.textContent='▶ open a case'; }
+  if(b5) { b5.disabled=false; b5.textContent='◈ open 500 cases'; }
+}
+
+// ── Log-normal price sampler ───────────────────────────────────────────────
+function samplePrice(centralPrice, cv) {
+  if (cv <= 0) return centralPrice;
+  const sigma2 = Math.log(1 + cv*cv);
+  const sigma  = Math.sqrt(sigma2);
+  const mu     = Math.log(centralPrice) - sigma2/2;
+  const u1 = Math.random(), u2 = Math.random();
+  const z  = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+  return Math.max(centralPrice * 0.2, Math.round(Math.exp(mu + sigma*z)));
+}
+
+// ── Simulate one case with price sampling ─────────────────────────────────
+function simulateOneCase500(setName) {
+  const cfg = getSetConfig(setName) || { casePack: 12 };
+  const { hitPool, remainingPool } = buildSplitPools(setName);
+  if (!hitPool.length) return null;
+  const pulls = [];
+  const hitTpl = hitPool[Math.floor(Math.random()*hitPool.length)];
+  const hitCv  = CONF_CV[hitTpl.isEstimated ? (hitTpl.confidence||'set-avg') : 'real'];
+  pulls.push({ ...hitTpl, drawnPrice: samplePrice(hitTpl.price, hitCv), slotIndex:0, isGuaranteed:true });
+  for (let i=1; i<cfg.casePack; i++) {
+    const t  = remainingPool[Math.floor(Math.random()*remainingPool.length)];
+    const cv = CONF_CV[t.isEstimated ? (t.confidence||'set-avg') : 'real'];
+    pulls.push({ ...t, drawnPrice: samplePrice(t.price, cv), slotIndex:i, isGuaranteed:false });
+  }
+  const totalValue  = Math.round(pulls.reduce((s,p)=>s+p.drawnPrice,0));
+  const estFraction = pulls.filter(p=>p.isEstimated).length / pulls.length;
+  return { totalValue, pulls, estFraction };
+}
+
+// ── Run 500 simulations ────────────────────────────────────────────────────
+function run500() {
+  const b5 = document.getElementById('btn-500');
+  const b1 = document.getElementById('btn-one');
+  if(b5) { b5.disabled=true; b5.textContent='running...'; }
+  if(b1)   b1.disabled=true;
+  showDistMode();
+  document.getElementById('chart-legend').style.display = 'none';
+  document.getElementById('sim-summary').classList.remove('visible');
+  document.getElementById('dist-case-section').style.display = 'none';
+  setTimeout(() => {
+    simResults = [];
+    for (let i=0; i<N_SIMS; i++) {
+      const r = simulateOneCase500(activeSet);
+      if (r) simResults.push(r);
+    }
+    if (!simResults.length) { enableBtns(); return; }
+    renderDistribution();
+    document.getElementById('chart-legend').style.display = 'flex';
+    enableBtns();
+  }, 20);
+}
+
+// ── Distribution chart ─────────────────────────────────────────────────────
+function renderDistribution() {
+  const cfg = getSetConfig(activeSet) || { casePrice: 500 };
+  const values = simResults.map(r => r.totalValue);
+  const sorted = [...values].sort((a,b)=>a-b);
+  const TAIL_PCT = 0.95;
+  const tailCutoff = sorted[Math.floor(sorted.length * TAIL_PCT)];
+  const mainValues = values.filter(v => v <= tailCutoff);
+  const tailSims   = simResults.filter(r => r.totalValue > tailCutoff);
+  const binMin = Math.floor(Math.min(...mainValues)/BIN_SIZE)*BIN_SIZE;
+  const binMax = Math.ceil(tailCutoff/BIN_SIZE)*BIN_SIZE;
+  const numBins = Math.ceil((binMax-binMin)/BIN_SIZE);
+  const bins = Array.from({length:numBins},(_,i)=>({lo:binMin+i*BIN_SIZE,hi:binMin+(i+1)*BIN_SIZE,sims:[],count:0,estSum:0}));
+  simResults.forEach(r => {
+    if (r.totalValue > tailCutoff) return;
+    const idx = Math.min(Math.floor((r.totalValue-binMin)/BIN_SIZE),numBins-1);
+    if (idx>=0&&idx<bins.length){bins[idx].sims.push(r);bins[idx].count++;bins[idx].estSum+=r.estFraction;}
+  });
+  const p10=sorted[Math.floor(sorted.length*0.10)],p50=sorted[Math.floor(sorted.length*0.50)],p90=sorted[Math.floor(sorted.length*0.90)];
+  const mean=Math.round(values.reduce((a,b)=>a+b,0)/values.length);
+  const pctAbove=Math.round(values.filter(v=>v>=cfg.casePrice).length/values.length*100);
+  const maxCount=Math.max(...bins.map(b=>b.count),tailSims.length);
+  const W=940,H=200,PAD={top:16,right:80,bottom:36,left:48};
+  const chartW=W-PAD.left-PAD.right,chartH=H-PAD.top-PAD.bottom;
+  const mainW=chartW*0.82,gapW=chartW*0.04,overflowW=chartW*0.10;
+  const overflowX=PAD.left+mainW+gapW;
+  const barW=mainW/numBins;
+  const xPos=val=>PAD.left+(val-binMin)/(binMax-binMin)*mainW;
+  const yH=count=>(count/maxCount)*chartH;
+  function binColor(b){if(!b.count)return 'transparent';const a=b.estSum/b.count;return a<0.25?'var(--bin-real)':a<0.60?'var(--bin-mixed)':'var(--bin-est)';}
+  let barsSvg='';
+  bins.forEach((b,i)=>{
+    if(!b.count)return;
+    const x=PAD.left+i*barW,h=yH(b.count),y=PAD.top+chartH-h;
+    const isSel=selectedBin===i,op=selectedBin===null?0.85:(isSel?1.0:0.25);
+    barsSvg+=`<rect class="dist-bar" data-bin="${i}" x="${x+1}" y="${y}" width="${Math.max(1,barW-2)}" height="${h}" fill="${binColor(b)}" opacity="${op}" style="cursor:pointer;transition:opacity 0.15s" onmouseenter="barHover(event,${i})" onmouseleave="barLeave()" onclick="selectBin500(${i})"/>`;
+  });
+  const overflowH=yH(tailSims.length),overflowY=PAD.top+chartH-overflowH;
+  if(tailSims.length>0){
+    barsSvg+=`<defs><pattern id="jackpot-stripe" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#e8ff47" stroke-width="2" opacity="0.5"/></pattern></defs>`;
+    const isSel=selectedBin==='overflow',op=selectedBin===null?0.75:(isSel?1.0:0.25);
+    barsSvg+=`<rect class="dist-bar" data-bin="overflow" x="${overflowX}" y="${overflowY}" width="${overflowW}" height="${overflowH}" fill="url(#jackpot-stripe)" opacity="${op}" style="cursor:pointer;transition:opacity 0.15s" onmouseenter="barHover(event,'overflow')" onmouseleave="barLeave()" onclick="selectBin500('overflow')"/>`;
+    barsSvg+=`<rect x="${overflowX}" y="${overflowY}" width="${overflowW}" height="${overflowH}" fill="none" stroke="#e8ff47" stroke-width="1" opacity="0.3"/>`;
+    const om=overflowX+overflowW/2;
+    barsSvg+=`<text x="${om}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#555" font-size="7" font-family="Space Mono">jackpot</text>`;
+    barsSvg+=`<text x="${om}" y="${PAD.top+chartH+23}" text-anchor="middle" fill="#444" font-size="7" font-family="Space Mono">top 5%</text>`;
+    barsSvg+=`<text x="${om}" y="${overflowY-4}" text-anchor="middle" fill="#666" font-size="7" font-family="Space Mono">${tailSims.length}</text>`;
+    const bx=PAD.left+mainW+gapW/2;
+    barsSvg+=`<path d="M${bx-3},${PAD.top} L${bx+3},${PAD.top+chartH/3} L${bx-3},${PAD.top+chartH*2/3} L${bx+3},${PAD.top+chartH}" stroke="#333" stroke-width="1.5" fill="none"/>`;
+  }
+  let yAxis='';
+  [0,0.25,0.5,0.75,1.0].forEach(t=>{const y=PAD.top+chartH-t*chartH,c=Math.round(t*maxCount);yAxis+=`<line x1="${PAD.left-4}" y1="${y}" x2="${PAD.left}" y2="${y}" stroke="#333" stroke-width="1"/><text x="${PAD.left-8}" y="${y+4}" text-anchor="end" fill="#444" font-size="8" font-family="Space Mono">${c}</text>`;});
+  let xAxis='';
+  for(let v=Math.ceil(binMin/100)*100;v<=binMax;v+=100){const x=xPos(v);if(x>PAD.left&&x<PAD.left+mainW){xAxis+=`<line x1="${x}" y1="${PAD.top+chartH}" x2="${x}" y2="${PAD.top+chartH+4}" stroke="#333" stroke-width="1"/><text x="${x}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#444" font-size="8" font-family="Space Mono">$${v}</text>`;}}
+  let grid='';[0.25,0.5,0.75,1.0].forEach(t=>{const y=PAD.top+chartH-t*chartH;grid+=`<line x1="${PAD.left}" y1="${y}" x2="${W-PAD.right+60}" y2="${y}" stroke="#171717" stroke-width="1"/>`;});
+  const ciX1=Math.max(PAD.left,xPos(p10)),ciX2=Math.min(PAD.left+mainW,xPos(Math.min(p90,tailCutoff)));
+  const ci50X1=Math.max(PAD.left,xPos(sorted[Math.floor(sorted.length*0.25)])),ci50X2=Math.min(PAD.left+mainW,xPos(Math.min(sorted[Math.floor(sorted.length*0.75)],tailCutoff)));
+  const ciShade=`<rect x="${ciX1}" y="${PAD.top}" width="${ciX2-ciX1}" height="${chartH}" fill="rgba(232,255,71,0.04)"/>`;
+  const ci50=`<rect x="${ci50X1}" y="${PAD.top}" width="${ci50X2-ci50X1}" height="${chartH}" fill="rgba(232,255,71,0.05)"/>`;
+  function vLine(val,color,label,dashed=false){const x=xPos(val);if(x<PAD.left||x>PAD.left+mainW)return '';const dash=dashed?'stroke-dasharray="4,3"':'';return `<line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+chartH}" stroke="${color}" stroke-width="1" ${dash} opacity="0.7"/><text x="${x+3}" y="${PAD.top+10}" fill="${color}" font-size="7" font-family="Space Mono" opacity="0.85">${label}</text>`;}
+  const svg=`<svg class="dist-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${grid}${ciShade}${ci50}${barsSvg}${vLine(cfg.casePrice,'#e8ff47','retail')}${vLine(p10,'rgba(232,255,71,0.4)','p10',true)}${vLine(p50,'rgba(232,255,71,0.6)','med',true)}${vLine(Math.min(p90,tailCutoff),'rgba(232,255,71,0.4)',p90>tailCutoff?'p90+':'p90',true)}${yAxis}${xAxis}<line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/><line x1="${PAD.left}" y1="${PAD.top+chartH}" x2="${W-PAD.right+60}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/></svg>`;
+  document.getElementById('chart-area').innerHTML=svg;
+  const meanRoi=Math.round((mean-cfg.casePrice)/cfg.casePrice*100);
+  const sumEl=document.getElementById('sim-summary');
+  sumEl.className='sim-summary visible';
+  sumEl.innerHTML=`<div><div class="sim-sum-label">median</div><div class="sim-sum-val ${p50>=cfg.casePrice?'green':'red'}">$${p50.toLocaleString()}</div></div><div><div class="sim-sum-label">mean</div><div class="sim-sum-val ${mean>=cfg.casePrice?'green':'red'}">$${mean.toLocaleString()}</div></div><div><div class="sim-sum-label">p10 – p90</div><div class="sim-sum-val" style="font-size:14px;color:var(--text)">$${p10.toLocaleString()} – $${p90.toLocaleString()}</div></div><div><div class="sim-sum-label">% above retail</div><div class="sim-sum-val ${pctAbove>=50?'green':'red'}">${pctAbove}%</div></div><div class="sim-sum-note">median roi: <strong style="color:${meanRoi>=0?'var(--green)':'var(--red)'}">${meanRoi>=0?'+':''}${meanRoi}%</strong><br>${N_SIMS} sims · $${BIN_SIZE} bins<br>click a bar to inspect that case</div>`;
+}
+
+// ── Bin helpers ────────────────────────────────────────────────────────────
+function getBins500() {
+  if (!simResults.length) return [];
+  const values=simResults.map(r=>r.totalValue),sorted=[...values].sort((a,b)=>a-b);
+  const tailCutoff=sorted[Math.floor(sorted.length*0.95)];
+  const binMin=Math.floor(Math.min(...values)/BIN_SIZE)*BIN_SIZE,binMax=Math.ceil(tailCutoff/BIN_SIZE)*BIN_SIZE;
+  const numBins=Math.ceil((binMax-binMin)/BIN_SIZE);
+  const bins=Array.from({length:numBins},(_,i)=>({lo:binMin+i*BIN_SIZE,hi:binMin+(i+1)*BIN_SIZE,sims:[],count:0,estSum:0}));
+  const overflow={lo:tailCutoff,hi:Infinity,sims:[],count:0,estSum:0,isOverflow:true};
+  simResults.forEach(r=>{if(r.totalValue>tailCutoff){overflow.sims.push(r);overflow.count++;overflow.estSum+=r.estFraction;}else{const idx=Math.min(Math.floor((r.totalValue-binMin)/BIN_SIZE),numBins-1);if(idx>=0&&idx<bins.length){bins[idx].sims.push(r);bins[idx].count++;bins[idx].estSum+=r.estFraction;}}});
+  bins.push(overflow);
+  return bins;
+}
+
+function selectBin500(binIdx) {
+  let b;
+  if (binIdx==='overflow'){const all=getBins500();b=all.find(x=>x.isOverflow);}
+  else{b=getBins500()[binIdx];}
+  if(!b||!b.count)return;
+  selectedBin=binIdx;
+  document.querySelectorAll('.dist-bar').forEach(el=>{const idx=el.dataset.bin;el.setAttribute('opacity',String(idx)===String(binIdx)?'1.0':'0.25');});
+  const sortedSims=[...b.sims].sort((a,b)=>a.totalValue-b.totalValue);
+  const medSim=sortedSims[Math.floor(sortedSims.length/2)];
+  activePulls500=medSim.pulls;
+  populateCaseGrid500(medSim);
+}
+
+function populateCaseGrid500(sim) {
+  const cfg=getSetConfig(activeSet)||{casePrice:500};
+  const tv=sim.totalValue,roi=Math.round((tv-cfg.casePrice)/cfg.casePrice*100);
+  const estCount=sim.pulls.filter(p=>p.isEstimated).length;
+  document.getElementById('dist-case-meta').innerHTML=
+    `value: <strong style="color:${tv>=cfg.casePrice?'var(--green)':'var(--red)'}">$${tv.toLocaleString()}</strong> · roi: <strong style="color:${roi>=0?'var(--green)':'var(--red)'}">${roi>=0?'+':''}${roi}%</strong> · ${estCount} projected`;
+  document.getElementById('dist-case-section').style.display='';
+  const grid=document.getElementById('dist-case-grid');
+  const cfg2=getSetConfig(activeSet)||{casePack:12};
+  // Ensure grid has the right number of slots
+  if(grid.children.length!==cfg2.casePack){
+    grid.innerHTML='';
+    for(let i=0;i<cfg2.casePack;i++){const d=document.createElement('div');d.className='box-slot';d.id='dslot-'+i;grid.appendChild(d);}
+  }
+  sim.pulls.forEach((pull,i)=>{
+    const slot=document.getElementById('dslot-'+i); if(!slot)return;
+    const vLow=pull.variant.toLowerCase(),isHit=pull.variant!=='Base';
+    const estBadge=(isHit&&pull.isEstimated)?`<span class="box-est-badge">EST</span>`:'';
+    slot.className=`box-slot populated${isHit?' is-hit is-'+vLow:''}${pull.isGuaranteed?' guaranteed-slot':''}`;
+    slot.style.animationDelay=(i*0.04)+'s';
+    if(isHit)slot.setAttribute('onclick',`openHitDrawer500(${i})`);
+    else slot.removeAttribute('onclick');
+    slot.innerHTML=`<span class="box-num">${i+1}${pull.isGuaranteed?' ★':''}</span>${estBadge}<span class="box-variant-badge" style="color:${VARIANT_COLORS[pull.variant]||'var(--muted)'}">${pull.variant}</span><span class="box-player">${pull.player}</span><span class="box-price${pull.isEstimated?' estimated':''}">$${Math.round(pull.drawnPrice).toLocaleString()}</span>`;
+  });
+}
+
+function openHitDrawer500(i) {
+  if(!activePulls500)return;
+  const pull=activePulls500[i];
+  if(!pull||pull.variant==='Base')return;
+  document.getElementById('d-player').textContent=pull.player;
+  document.getElementById('d-variant').textContent=pull.variant+(pull.isEstimated?' · Projected Value':' · Sales History');
+  if(pull.isEstimated)renderProjectionBody(pull);
+  else renderSalesBody(pull);
+  document.getElementById('overlay').classList.add('visible');
+  document.getElementById('drawer').classList.add('open');
+}
+
+// ── Bar interaction ────────────────────────────────────────────────────────
+function barHover(event, binIdx) {
+  let b;
+  if(binIdx==='overflow'){const all=getBins500();b=all.find(x=>x.isOverflow);}
+  else{b=getBins500()[binIdx];}
+  if(!b||!b.count)return;
+  const cfg=getSetConfig(activeSet)||{casePrice:500};
+  const avgEst=b.count>0?b.estSum/b.count:0;
+  const quality=avgEst<0.25?'real data':avgEst<0.60?'mixed':'mostly projected';
+  const tt=document.getElementById('chart-tooltip');
+  if(b.isOverflow){
+    const av=Math.round(b.sims.reduce((s,r)=>s+r.totalValue,0)/b.sims.length);
+    const ar=Math.round((av-cfg.casePrice)/cfg.casePrice*100);
+    document.getElementById('tt-val').textContent='jackpot — top 5%';
+    document.getElementById('tt-count').textContent=`${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
+    document.getElementById('tt-roi').textContent=`avg ${ar>=0?'+':''}${ar}%`;
+  } else {
+    const mid=(b.lo+b.hi)/2,roi=Math.round((mid-cfg.casePrice)/cfg.casePrice*100);
+    document.getElementById('tt-val').textContent=`$${b.lo.toLocaleString()} – $${b.hi.toLocaleString()}`;
+    document.getElementById('tt-count').textContent=`${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
+    document.getElementById('tt-roi').textContent=`${roi>=0?'+':''}${roi}%`;
+  }
+  document.getElementById('tt-quality').textContent=quality;
+  tt.classList.add('visible');
+  positionTooltip(event);
+}
+function barLeave(){document.getElementById('chart-tooltip').classList.remove('visible');}
+function positionTooltip(e){const tt=document.getElementById('chart-tooltip');tt.style.left=Math.min(e.clientX+16,window.innerWidth-200)+'px';tt.style.top=Math.max(10,e.clientY-60)+'px';}
+document.addEventListener('mousemove',e=>{if(document.getElementById('chart-tooltip').classList.contains('visible'))positionTooltip(e);});
 
 // ── Hit value tooltip ─────────────────────────────────────────────────────────
 function showHitTooltip(e) {
@@ -1070,5 +1409,12 @@ function hideHitTooltip() {
 
 loadData();
 </script>
+
+<div class="chart-tooltip" id="chart-tooltip">
+  <div class="tt-val" id="tt-val"></div>
+  <div class="tt-row">simulations: <span id="tt-count"></span></div>
+  <div class="tt-row">roi vs retail: <span id="tt-roi"></span></div>
+  <div class="tt-row">data quality: <span id="tt-quality"></span></div>
+</div>
 </body>
 </html>
