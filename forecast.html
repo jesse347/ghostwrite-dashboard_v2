@@ -1175,16 +1175,25 @@ function buildPool(setName) {
   const products = (allData.products||[]).filter(p => p.set===setName && p.player && p.player!=='Unknown');
   const { projections } = buildProjections(setName, products);
   const pool = []; const poolByVariant = {};
-  [...new Set(products.map(p=>p.player))].forEach(player => {
-    products.filter(p=>p.player===player).forEach(pv => {
-      const pop = POP_DEFAULTS[pv.variant]; if (!pop) return;
-      const price = getPrice(player, pv.variant, products, projections); if (!price) return;
-      for (let i=0; i<pop; i++) {
-        pool.push({ player, variant: pv.variant, price: price.value,
+
+  // All variants present in this set (from PI data)
+  const setVariants = [...new Set(products.map(p => p.variant))].filter(v => POP_DEFAULTS[v]);
+  const allPlayers  = [...new Set(products.map(p => p.player))];
+
+  // For every player x every variant in the set, attempt to get a price.
+  // Key fix: previously we only iterated variants a player already had PI rows
+  // for, so projected combos (missing from PI entirely) were never added to pool.
+  allPlayers.forEach(player => {
+    setVariants.forEach(variant => {
+      const pop = POP_DEFAULTS[variant]; if (!pop) return;
+      const price = getPrice(player, variant, products, projections);
+      if (!price) return;
+      for (let i = 0; i < pop; i++) {
+        pool.push({ player, variant, price: price.value,
           isEstimated: price.estimated, confidence: price.confidence,
           projData: price.projData||null, realData: price.realData||null });
       }
-      poolByVariant[pv.variant] = (poolByVariant[pv.variant]||0)+pop;
+      poolByVariant[variant] = (poolByVariant[variant]||0) + pop;
     });
   });
   return { pool, poolByVariant, totalPop: pool.length };
