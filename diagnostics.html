@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ghostladder · diagnostics</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Unbounded:wght@700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080808;
+  --s1: #0d0d0d;
+  --s2: #141414;
+  --s3: #1c1c1c;
+  --border: #1f1f1f;
+  --border2: #2a2a2a;
+  --accent: #e8ff47;
+  --text: #efefef;
+  --muted: #555;
+  --muted2: #333;
+  --green: #3ddc84;
+  --red: #ff4455;
+  --orange: #ffb347;
+  --mono: 'Space Mono', monospace;
+  --display: 'Unbounded', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); min-height: 100vh; }
+body { color: var(--text); font-family: var(--mono); font-size: 11px; }
+
+/* ── Header ── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 28px; border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: rgba(8,8,8,0.97);
+  backdrop-filter: blur(8px); z-index: 50; gap: 20px;
+}
+.header-logo { font-family: var(--display); font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 2px; text-decoration: none; }
+.header-title { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+.header-warning { font-size: 8px; letter-spacing: 1px; color: var(--red); border: 1px solid var(--red); padding: 3px 10px; opacity: 0.7; }
+
+/* ── Page ── */
+.page { padding: 28px; max-width: 1600px; margin: 0 auto; }
+
+/* ── Set tabs ── */
+.set-tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+.set-tab {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 6px 16px; cursor: pointer; background: var(--s2);
+  border: 1px solid var(--border2); color: var(--muted); transition: all 0.12s;
+}
+.set-tab:hover { color: var(--text); border-color: var(--muted); }
+.set-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+/* ── Section ── */
+.section { margin-bottom: 40px; }
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  flex-wrap: wrap; gap: 10px;
+}
+.section-title { font-family: var(--display); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.section-meta { font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+.section-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── Summary pills ── */
+.summary-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.pill { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border: 1px solid var(--border2); color: var(--muted); }
+.pill strong { color: var(--text); }
+.pill.green { border-color: rgba(61,220,132,0.3); }
+.pill.green strong { color: var(--green); }
+.pill.red { border-color: rgba(255,68,85,0.3); }
+.pill.red strong { color: var(--red); }
+.pill.orange { border-color: rgba(255,179,71,0.3); }
+.pill.orange strong { color: var(--orange); }
+.pill.accent { border-color: rgba(232,255,71,0.3); }
+.pill.accent strong { color: var(--accent); }
+
+/* ── Download btn ── */
+.dl-btn {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 5px 14px; cursor: pointer; background: transparent;
+  border: 1px solid var(--border2); color: var(--muted); transition: all 0.12s;
+  text-decoration: none; display: inline-block;
+}
+.dl-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Filter row ── */
+.filter-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.filter-label { font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+.filter-chip {
+  font-family: var(--mono); font-size: 8px; letter-spacing: 1px; text-transform: uppercase;
+  padding: 3px 10px; cursor: pointer; background: var(--s2);
+  border: 1px solid var(--border2); color: var(--muted); transition: all 0.1s;
+}
+.filter-chip:hover { color: var(--text); }
+.filter-chip.active { background: var(--s3); border-color: var(--muted); color: var(--text); }
+.search-box {
+  background: var(--s2); border: 1px solid var(--border2); color: var(--text);
+  font-family: var(--mono); font-size: 10px; padding: 4px 10px; outline: none;
+  width: 200px; margin-left: auto;
+}
+.search-box:focus { border-color: var(--accent); }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 10px; }
+thead th {
+  font-size: 7px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted);
+  text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--border);
+  white-space: nowrap; cursor: pointer; user-select: none;
+}
+thead th:hover { color: var(--text); }
+thead th.sort-asc::after { content: ' ▲'; color: var(--accent); }
+thead th.sort-desc::after { content: ' ▼'; color: var(--accent); }
+tbody tr { border-bottom: 1px solid var(--border2); transition: background 0.08s; }
+tbody tr:hover { background: var(--s1); }
+tbody td { padding: 7px 12px 7px 0; color: var(--muted); vertical-align: middle; white-space: nowrap; }
+
+/* Cell types */
+.td-player { color: var(--text) !important; font-weight: 700; }
+.td-set { font-size: 8px; color: var(--muted) !important; }
+.td-price { font-family: var(--mono); font-size: 12px; color: var(--accent) !important; }
+.td-price-proj { font-family: var(--mono); font-size: 12px; color: var(--orange) !important; }
+.td-price-none { color: var(--muted2) !important; }
+.td-pop { color: var(--muted); }
+.td-sales { color: var(--text); }
+.td-recency { font-size: 8px; color: var(--muted); }
+
+/* Status badges */
+.badge {
+  display: inline-block; font-size: 7px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 2px 7px; border: 1px solid;
+}
+.badge-real    { color: var(--green);  border-color: rgba(61,220,132,0.4); }
+.badge-proj    { color: var(--orange); border-color: rgba(255,179,71,0.4); }
+.badge-gap     { color: var(--red);    border-color: rgba(255,68,85,0.4);  }
+.badge-orphan  { color: #c084fc;       border-color: rgba(192,132,252,0.4); }
+
+/* Confidence */
+.conf-high     { color: var(--green); }
+.conf-medium   { color: #a8d8a8; }
+.conf-medlow   { color: var(--orange); }
+.conf-low      { color: #ff9050; }
+.conf-verylow  { color: var(--red); }
+
+/* Variant tag */
+.v-tag {
+  display: inline-block; font-size: 7px; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 1px 5px; border: 1px solid;
+}
+.v-fire    { color: #ff2d2d; border-color: #ff2d2d; }
+.v-chrome  { color: #a8c8ff; border-color: #a8c8ff; }
+.v-gold    { color: #ffd700; border-color: #ffd700; }
+.v-emerald { color: #2ecc71; border-color: #2ecc71; }
+.v-victory { color: #e8ff47; border-color: #e8ff47; }
+.v-base    { color: #555;    border-color: #333; }
+.v-sp      { color: #c084fc; border-color: #c084fc; }
+.v-vides   { color: #ff9f43; border-color: #ff9f43; }
+.v-betonwomen { color: #ff6eb4; border-color: #ff6eb4; }
+
+/* Loading / empty */
+.loading { padding: 60px; text-align: center; color: var(--muted); font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+.empty   { padding: 30px; text-align: center; color: var(--muted2); font-size: 9px; letter-spacing: 1px; }
+
+/* Row count */
+.row-count { font-size: 8px; color: var(--muted); letter-spacing: 1px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a class="header-logo" href="index.html">ghostladder</a>
+  <div class="header-title">diagnostics · internal only</div>
+  <div class="header-warning">⚠ not for public use</div>
+</div>
+
+<div class="page">
+
+  <div class="set-tabs" id="set-tabs">
+    <div class="loading" style="padding:8px 0">loading sets...</div>
+  </div>
+
+  <!-- Table 1: Set Math + Prices -->
+  <div class="section" id="t1-section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Table 1 — Set Math + Prices</div>
+        <div class="section-meta">every set_math row · real or projected price · gaps where no price available</div>
+      </div>
+      <div class="section-actions">
+        <span class="row-count" id="t1-count"></span>
+        <a class="dl-btn" id="t1-dl" href="#" onclick="downloadCSV('t1')">↓ download csv</a>
+      </div>
+    </div>
+    <div class="summary-pills" id="t1-pills"></div>
+    <div class="filter-row">
+      <span class="filter-label">show</span>
+      <button class="filter-chip active" data-t1filter="all"    onclick="setT1Filter(this)">All</button>
+      <button class="filter-chip"        data-t1filter="real"   onclick="setT1Filter(this)">Real only</button>
+      <button class="filter-chip"        data-t1filter="proj"   onclick="setT1Filter(this)">Projected only</button>
+      <button class="filter-chip"        data-t1filter="gap"    onclick="setT1Filter(this)">Gaps (no price)</button>
+      <input class="search-box" type="text" id="t1-search" placeholder="filter player..." oninput="renderT1()">
+    </div>
+    <div class="table-wrap" id="t1-wrap"><div class="loading">loading...</div></div>
+  </div>
+
+  <!-- Table 2: Full Outer Join -->
+  <div class="section" id="t2-section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Table 2 — Full Outer Join (PI ↔ Set Math)</div>
+        <div class="section-meta">real data · green = matched · purple = orphaned PI row (no set_math entry) · red = gap (set_math row with no price)</div>
+      </div>
+      <div class="section-actions">
+        <span class="row-count" id="t2-count"></span>
+        <a class="dl-btn" id="t2-dl" href="#" onclick="downloadCSV('t2')">↓ download csv</a>
+      </div>
+    </div>
+    <div class="summary-pills" id="t2-pills"></div>
+    <div class="filter-row">
+      <span class="filter-label">show</span>
+      <button class="filter-chip active" data-t2filter="all"     onclick="setT2Filter(this)">All</button>
+      <button class="filter-chip"        data-t2filter="matched" onclick="setT2Filter(this)">Matched</button>
+      <button class="filter-chip"        data-t2filter="orphan"  onclick="setT2Filter(this)">Orphans (PI only)</button>
+      <button class="filter-chip"        data-t2filter="gap"     onclick="setT2Filter(this)">Gaps (math only)</button>
+      <input class="search-box" type="text" id="t2-search" placeholder="filter player..." oninput="renderT2()">
+    </div>
+    <div class="table-wrap" id="t2-wrap"><div class="loading">loading...</div></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Supabase
+// ─────────────────────────────────────────────────────────────────────────────
+const SB_URL = 'https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY = 'sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H   = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function rpc(fn, p={}) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST',headers:SB_H,body:JSON.stringify(p)});
+  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
+  return r.json();
+}
+async function sbGet(table, qs) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {headers:SB_H});
+  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  return r.json();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Projection engine — identical to heatmap.html
+// ─────────────────────────────────────────────────────────────────────────────
+function bestPrice(product) {
+  if (!product) return null;
+  if (product.avg30d  && product.sales30d  >= 1) return { price: product.avg30d,  recency: '30d',      sales: product.sales30d };
+  if (product.avg90d  && product.sales90d  >= 1) return { price: product.avg90d,  recency: '90d',      sales: product.sales90d };
+  if (product.avgPrice && product.totalSales >= 1) return { price: product.avgPrice, recency: 'all-time', sales: product.totalSales };
+  return null;
+}
+
+const VARIANT_PROXIMITY = {
+  'Base':    { 'Victory': 0.9, 'Vides': 0.85, 'Emerald': 0.85, 'Gold': 0.75, 'Chrome': 0.6,  'Fire': 0.4,  'SP': 0.8  },
+  'Victory': { 'Base': 0.9,   'Vides': 0.9,   'Emerald': 0.9,  'Gold': 0.8,  'Chrome': 0.65, 'Fire': 0.45, 'SP': 0.85 },
+  'Emerald': { 'Base': 0.85,  'Victory': 0.9, 'Vides': 0.95,   'Gold': 0.9,  'Chrome': 0.7,  'Fire': 0.5,  'SP': 0.8  },
+  'Vides':   { 'Base': 0.85,  'Victory': 0.9, 'Emerald': 0.95, 'Gold': 0.9,  'Chrome': 0.7,  'Fire': 0.5,  'SP': 0.8  },
+  'Gold':    { 'Base': 0.75,  'Victory': 0.8, 'Emerald': 0.9,  'Vides': 0.9, 'Chrome': 0.85, 'Fire': 0.65, 'SP': 0.7  },
+  'Chrome':  { 'Base': 0.6,   'Victory': 0.65,'Emerald': 0.7,  'Vides': 0.7, 'Gold': 0.85,   'Fire': 0.8,  'SP': 0.6  },
+  'Fire':    { 'Base': 0.4,   'Victory': 0.45,'Emerald': 0.5,  'Vides': 0.5, 'Gold': 0.65,   'Chrome': 0.8,'SP': 0.4  },
+  'SP':      { 'Base': 0.8,   'Victory': 0.85,'Emerald': 0.8,  'Vides': 0.8, 'Gold': 0.7,    'Chrome': 0.6,'Fire': 0.4},
+};
+
+function buildProjections(setName, setProducts, setMathRows) {
+  const byPlayer = {};
+  setProducts.forEach(p => {
+    if (!byPlayer[p.player]) byPlayer[p.player] = {};
+    byPlayer[p.player][p.variant] = p;
+  });
+
+  // Variant universe from set_math (not just PI rows)
+  const allVariants = setMathRows.length
+    ? [...new Set(setMathRows.map(r => r.variant))]
+    : [...new Set(setProducts.map(p => p.variant))];
+
+  // Cross-variant ratios
+  const crossRatios = {};
+  allVariants.forEach(vA => {
+    allVariants.forEach(vB => {
+      if (vA === vB) return;
+      crossRatios[vA+'|||'+vB] = [];
+      Object.values(byPlayer).forEach(pv => {
+        const dA = bestPrice(pv[vA]), dB = bestPrice(pv[vB]);
+        if (dA && dB && dA.price > 0 && dB.price > 0)
+          crossRatios[vA+'|||'+vB].push({ ratio: dA.price/dB.price, salesA: dA.sales, salesB: dB.sales });
+      });
+    });
+  });
+
+  function weightedMedianRatio(pairs) {
+    if (!pairs.length) return null;
+    const s = [...pairs].sort((a,b) => a.ratio-b.ratio);
+    const tw = s.reduce((t,p) => t+Math.min(p.salesA,p.salesB), 0);
+    let cw = 0;
+    for (const p of s) {
+      cw += Math.min(p.salesA, p.salesB);
+      if (cw >= tw/2) return { ratio: p.ratio, n: pairs.length };
+    }
+    return { ratio: s[Math.floor(s.length/2)].ratio, n: pairs.length };
+  }
+
+  const setRatios = {};
+  Object.entries(crossRatios).forEach(([k, pairs]) => {
+    const r = weightedMedianRatio(pairs);
+    if (r) setRatios[k] = r;
+  });
+
+  const projections = {};
+  Object.entries(byPlayer).forEach(([player, variants]) => {
+    const knownVariants = Object.keys(variants).filter(v => variants[v]?.avgPrice > 0);
+    if (!knownVariants.length) return;
+
+    // Only project for variants this player has in set_math
+    const playerMathVariants = setMathRows.filter(r => r.player === player).map(r => r.variant);
+    const targetVariants = playerMathVariants.length ? playerMathVariants : allVariants;
+
+    targetVariants.forEach(tv => {
+      if (variants[tv]?.avgPrice > 0) return; // has real data
+
+      const anchors = [];
+      knownVariants.forEach(sv => {
+        const rd = setRatios[tv+'|||'+sv]; if (!rd) return;
+        const sp = bestPrice(variants[sv]); if (!sp) return;
+        const prox = (VARIANT_PROXIMITY[tv]||{})[sv] || 0.5;
+        const rf = sp.recency === '30d' ? 1.0 : sp.recency === '90d' ? 0.7 : 0.4;
+        anchors.push({
+          sourceVariant: sv, sourcePrice: Math.round(sp.price),
+          sourceRecency: sp.recency, sourceSales: sp.sales,
+          ratio: Math.round(rd.ratio*100)/100, ratioN: rd.n,
+          impliedPrice: Math.round(sp.price * rd.ratio),
+          proximity: prox, recencyFactor: rf,
+          weight: prox * rf * Math.sqrt(sp.sales),
+        });
+      });
+
+      if (!anchors.length) return;
+
+      const tw = anchors.reduce((s,a) => s+a.weight, 0);
+      const pp = tw > 0
+        ? Math.round(anchors.reduce((s,a) => s+a.impliedPrice*a.weight, 0) / tw)
+        : Math.round(anchors[0].impliedPrice);
+
+      const has30d = anchors.some(a => a.sourceRecency === '30d');
+      const has90d = anchors.some(a => a.sourceRecency === '90d');
+      const hp = anchors.filter(a => a.proximity >= 0.8).length;
+      let conf, cs;
+      if      (anchors.length >= 3 && has30d && hp >= 2)       { conf='High';       cs=90; }
+      else if (anchors.length >= 2 && (has30d || has90d))       { conf='Medium';     cs=65; }
+      else if (anchors.length >= 2)                             { conf='Medium-Low'; cs=45; }
+      else if (anchors.length === 1 && anchors[0].sourceSales >= 10) { conf='Low';  cs=30; }
+      else                                                       { conf='Very Low';  cs=15; }
+
+      projections[player+'|||'+tv] = { price: pp, confidence: conf, confidenceScore: cs, anchorCount: anchors.length };
+    });
+  });
+  return projections;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let allSets     = [];      // [{id, name, case_price, figures_per_case}]
+let setMathAll  = [];      // all set_math rows [{set_id, player, variant, population}]
+let piAll       = [];      // all PI rows (normalized)
+let activeSet   = null;
+let t1Filter    = 'all';
+let t2Filter    = 'all';
+let t1SortCol   = 'player';
+let t1SortDir   = 'asc';
+let t2SortCol   = 'player';
+let t2SortDir   = 'asc';
+
+// Computed for active set
+let t1Rows = [];
+let t2Rows = [];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Load
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAll() {
+  try {
+    const [setsData, mathData, piData] = await Promise.all([
+      sbGet('sets', 'select=id,name,case_price,figures_per_case,active&active=eq.true&order=name.asc'),
+      sbGet('set_math', 'select=set_id,player,variant,population'),
+      rpc('get_price_intelligence'),
+    ]);
+
+    allSets    = setsData;
+    setMathAll = mathData;
+    piAll      = piData.filter(r => r.player && r.player !== 'Unknown').map(r => ({
+      set:        r.set_name,
+      player:     r.player,
+      variant:    r.variant,
+      totalSales: +r.total_sales  || 0,
+      avgPrice:   +r.avg_price    || 0,
+      avg30d:     +r.avg_30d      || 0,
+      sales30d:   +r.sales_30d    || 0,
+      avg90d:     +r.avg_90d      || 0,
+      sales90d:   +r.sales_90d    || 0,
+    }));
+
+    // Build set tabs — all sets that have EITHER set_math rows OR PI data
+    const setIdToName = {};
+    allSets.forEach(s => { setIdToName[s.id] = s.name; });
+
+    const setsWithMath = [...new Set(mathData.map(r => setIdToName[r.set_id]).filter(Boolean))];
+    const setsWithPI   = [...new Set(piAll.map(r => r.set))];
+    const allSetNames  = [...new Set([...setsWithMath, ...setsWithPI])].sort();
+
+    renderSetTabs(allSetNames);
+    activeSet = allSetNames[0];
+    activateSet(activeSet);
+
+  } catch(e) {
+    document.getElementById('set-tabs').innerHTML = `<div style="color:#ff4455;font-size:9px">load error: ${e.message}</div>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Set tabs
+// ─────────────────────────────────────────────────────────────────────────────
+function renderSetTabs(setNames) {
+  document.getElementById('set-tabs').innerHTML = setNames.map(n => `
+    <button class="set-tab" data-set="${esc(n)}" onclick="activateSet('${esc(n)}')">${n}</button>
+  `).join('');
+}
+
+function activateSet(setName) {
+  activeSet = setName;
+  document.querySelectorAll('.set-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.set === setName);
+  });
+  computeRows();
+  renderT1();
+  renderT2();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Compute rows for both tables
+// ─────────────────────────────────────────────────────────────────────────────
+function computeRows() {
+  // Look up set_id for active set
+  const setObj     = allSets.find(s => s.name === activeSet);
+  const setId      = setObj ? setObj.id : null;
+
+  // set_math rows for this set
+  const mathRows   = setMathAll.filter(r => r.set_id === setId);
+
+  // PI rows for this set
+  const piRows     = piAll.filter(p => p.set === activeSet);
+
+  // Build projections (same as heatmap)
+  const projections = buildProjections(activeSet, piRows, mathRows);
+
+  // ── TABLE 1: every set_math row + price ────────────────────────────────
+  t1Rows = mathRows.map(row => {
+    const { player, variant, population } = row;
+    const pi = piRows.find(p => p.player === player && p.variant === variant);
+
+    if (pi && pi.avgPrice > 0) {
+      // Real data — use best price hierarchy
+      const bp = bestPrice(pi);
+      return {
+        player, variant, population,
+        priceType: 'real',
+        price:      Math.round(pi.avgPrice),
+        bestPrice:  bp ? Math.round(bp.price) : Math.round(pi.avgPrice),
+        recency:    bp ? bp.recency : 'all-time',
+        totalSales: pi.totalSales,
+        avg30d:     pi.avg30d  ? Math.round(pi.avg30d)  : null,
+        avg90d:     pi.avg90d  ? Math.round(pi.avg90d)  : null,
+        confidence: null,
+        anchorCount: null,
+      };
+    }
+
+    // Try projection
+    const proj = projections[player+'|||'+variant];
+    if (proj && proj.price > 0) {
+      return {
+        player, variant, population,
+        priceType:   'proj',
+        price:       proj.price,
+        bestPrice:   proj.price,
+        recency:     null,
+        totalSales:  pi ? pi.totalSales : 0,
+        avg30d:      null,
+        avg90d:      null,
+        confidence:  proj.confidence,
+        anchorCount: proj.anchorCount,
+      };
+    }
+
+    // Gap — no price at all
+    return {
+      player, variant, population,
+      priceType:   'gap',
+      price:       null,
+      bestPrice:   null,
+      recency:     null,
+      totalSales:  pi ? pi.totalSales : 0,
+      avg30d:      null,
+      avg90d:      null,
+      confidence:  null,
+      anchorCount: null,
+    };
+  });
+
+  // ── TABLE 2: full outer join ───────────────────────────────────────────
+  // Build lookup sets
+  const mathKey = r => r.player + '|||' + r.variant;
+  const piKey   = r => r.player + '|||' + r.variant;
+  const mathKeySet = new Set(mathRows.map(mathKey));
+  const piKeySet   = new Set(piRows.map(piKey));
+
+  const rows2 = [];
+
+  // (a) Matched rows — in both math and PI
+  mathRows.forEach(row => {
+    const pi = piRows.find(p => p.player === row.player && p.variant === row.variant);
+    if (pi && pi.avgPrice > 0) {
+      const bp = bestPrice(pi);
+      rows2.push({
+        joinType:   'matched',
+        player:     row.player,
+        variant:    row.variant,
+        population: row.population,
+        piAvgPrice: Math.round(pi.avgPrice),
+        bestPrice:  bp ? Math.round(bp.price) : Math.round(pi.avgPrice),
+        recency:    bp ? bp.recency : 'all-time',
+        totalSales: pi.totalSales,
+        avg30d:     pi.avg30d  ? Math.round(pi.avg30d)  : null,
+        avg90d:     pi.avg90d  ? Math.round(pi.avg90d)  : null,
+        inMath:     true,
+        inPI:       true,
+      });
+    }
+  });
+
+  // (b) Gap rows — in set_math but NOT in PI (or PI has no price)
+  mathRows.forEach(row => {
+    const pi = piRows.find(p => p.player === row.player && p.variant === row.variant);
+    if (!pi || !pi.avgPrice) {
+      rows2.push({
+        joinType:   'gap',
+        player:     row.player,
+        variant:    row.variant,
+        population: row.population,
+        piAvgPrice: null,
+        bestPrice:  null,
+        recency:    null,
+        totalSales: pi ? pi.totalSales : 0,
+        avg30d:     null,
+        avg90d:     null,
+        inMath:     true,
+        inPI:       false,
+      });
+    }
+  });
+
+  // (c) Orphan rows — in PI but NOT in set_math
+  piRows.forEach(pi => {
+    if (!pi.avgPrice) return;
+    if (!mathKeySet.has(piKey(pi))) {
+      const bp = bestPrice(pi);
+      rows2.push({
+        joinType:   'orphan',
+        player:     pi.player,
+        variant:    pi.variant,
+        population: null,
+        piAvgPrice: Math.round(pi.avgPrice),
+        bestPrice:  bp ? Math.round(bp.price) : Math.round(pi.avgPrice),
+        recency:    bp ? bp.recency : 'all-time',
+        totalSales: pi.totalSales,
+        avg30d:     pi.avg30d  ? Math.round(pi.avg30d)  : null,
+        avg90d:     pi.avg90d  ? Math.round(pi.avg90d)  : null,
+        inMath:     false,
+        inPI:       true,
+      });
+    }
+  });
+
+  t2Rows = rows2;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render Table 1
+// ─────────────────────────────────────────────────────────────────────────────
+function setT1Filter(btn) {
+  document.querySelectorAll('[data-t1filter]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  t1Filter = btn.dataset.t1filter;
+  renderT1();
+}
+
+function sortT1(col) {
+  if (t1SortCol === col) t1SortDir = t1SortDir === 'asc' ? 'desc' : 'asc';
+  else { t1SortCol = col; t1SortDir = col === 'price' ? 'desc' : 'asc'; }
+  renderT1();
+}
+
+function renderT1() {
+  const q = (document.getElementById('t1-search').value || '').toLowerCase().trim();
+  let rows = t1Rows.filter(r => {
+    if (t1Filter === 'real' && r.priceType !== 'real') return false;
+    if (t1Filter === 'proj' && r.priceType !== 'proj') return false;
+    if (t1Filter === 'gap'  && r.priceType !== 'gap')  return false;
+    if (q && !`${r.player} ${r.variant}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  // Sort
+  rows.sort((a, b) => {
+    let av = a[t1SortCol], bv = b[t1SortCol];
+    if (av == null) av = t1SortDir === 'asc' ? Infinity : -Infinity;
+    if (bv == null) bv = t1SortDir === 'asc' ? Infinity : -Infinity;
+    if (typeof av === 'string') return t1SortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return t1SortDir === 'asc' ? av - bv : bv - av;
+  });
+
+  // Summary pills
+  const real = t1Rows.filter(r => r.priceType === 'real').length;
+  const proj = t1Rows.filter(r => r.priceType === 'proj').length;
+  const gaps = t1Rows.filter(r => r.priceType === 'gap').length;
+  const total = t1Rows.length;
+  document.getElementById('t1-pills').innerHTML = `
+    <div class="pill accent"><strong>${total}</strong> set_math rows</div>
+    <div class="pill green"><strong>${real}</strong> real (${pct(real,total)}%)</div>
+    <div class="pill orange"><strong>${proj}</strong> projected (${pct(proj,total)}%)</div>
+    <div class="pill red"><strong>${gaps}</strong> gaps (${pct(gaps,total)}%)</div>
+  `;
+  document.getElementById('t1-count').textContent = rows.length + ' rows shown';
+
+  if (!rows.length) {
+    document.getElementById('t1-wrap').innerHTML = '<div class="empty">no rows match</div>';
+    return;
+  }
+
+  function th(col, label) {
+    const cls = t1SortCol === col ? 'sort-'+t1SortDir : '';
+    return `<th class="${cls}" onclick="sortT1('${col}')">${label}</th>`;
+  }
+
+  document.getElementById('t1-wrap').innerHTML = `
+    <table id="t1-table">
+      <thead><tr>
+        ${th('player','Player')}
+        ${th('variant','Variant')}
+        ${th('population','Pop')}
+        ${th('priceType','Type')}
+        ${th('price','All-time Avg')}
+        ${th('bestPrice','Best Price')}
+        ${th('recency','Recency')}
+        ${th('totalSales','Sales')}
+        ${th('avg30d','30d Avg')}
+        ${th('avg90d','90d Avg')}
+        ${th('confidence','Confidence')}
+        ${th('anchorCount','Anchors')}
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td class="td-player">${r.player}</td>
+          <td><span class="v-tag v-${r.variant.toLowerCase().replace(/\s+/g,'-').replace('bet on women','betonwomen')}">${r.variant}</span></td>
+          <td class="td-pop">/${r.population}</td>
+          <td>${typeBadge(r.priceType)}</td>
+          <td class="${r.price ? (r.priceType==='real'?'td-price':'td-price-proj') : 'td-price-none'}">${r.price ? '$'+r.price.toLocaleString() : '—'}</td>
+          <td class="${r.bestPrice ? (r.priceType==='real'?'td-price':'td-price-proj') : 'td-price-none'}">${r.bestPrice ? '$'+r.bestPrice.toLocaleString() : '—'}</td>
+          <td class="td-recency">${r.recency || '—'}</td>
+          <td class="td-sales">${r.totalSales || '—'}</td>
+          <td class="${r.avg30d ? 'td-price' : 'td-price-none'}">${r.avg30d ? '$'+r.avg30d.toLocaleString() : '—'}</td>
+          <td>${r.avg90d ? '$'+r.avg90d.toLocaleString() : '—'}</td>
+          <td class="${confClass(r.confidence)}">${r.confidence || '—'}</td>
+          <td>${r.anchorCount != null ? r.anchorCount : '—'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render Table 2
+// ─────────────────────────────────────────────────────────────────────────────
+function setT2Filter(btn) {
+  document.querySelectorAll('[data-t2filter]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  t2Filter = btn.dataset.t2filter;
+  renderT2();
+}
+
+function sortT2(col) {
+  if (t2SortCol === col) t2SortDir = t2SortDir === 'asc' ? 'desc' : 'asc';
+  else { t2SortCol = col; t2SortDir = col === 'piAvgPrice' || col === 'totalSales' ? 'desc' : 'asc'; }
+  renderT2();
+}
+
+function renderT2() {
+  const q = (document.getElementById('t2-search').value || '').toLowerCase().trim();
+  let rows = t2Rows.filter(r => {
+    if (t2Filter === 'matched' && r.joinType !== 'matched') return false;
+    if (t2Filter === 'orphan'  && r.joinType !== 'orphan')  return false;
+    if (t2Filter === 'gap'     && r.joinType !== 'gap')     return false;
+    if (q && !`${r.player} ${r.variant}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  rows.sort((a, b) => {
+    let av = a[t2SortCol], bv = b[t2SortCol];
+    if (av == null) av = t2SortDir === 'asc' ? Infinity : -Infinity;
+    if (bv == null) bv = t2SortDir === 'asc' ? Infinity : -Infinity;
+    if (typeof av === 'string') return t2SortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    return t2SortDir === 'asc' ? av - bv : bv - av;
+  });
+
+  // Summary pills
+  const matched = t2Rows.filter(r => r.joinType === 'matched').length;
+  const orphans = t2Rows.filter(r => r.joinType === 'orphan').length;
+  const gaps    = t2Rows.filter(r => r.joinType === 'gap').length;
+  const total   = t2Rows.length;
+  document.getElementById('t2-pills').innerHTML = `
+    <div class="pill accent"><strong>${total}</strong> total rows</div>
+    <div class="pill green"><strong>${matched}</strong> matched</div>
+    <div class="pill" style="border-color:rgba(192,132,252,0.3)"><strong style="color:#c084fc">${orphans}</strong> orphaned PI rows</div>
+    <div class="pill red"><strong>${gaps}</strong> gaps (math only)</div>
+  `;
+  document.getElementById('t2-count').textContent = rows.length + ' rows shown';
+
+  if (!rows.length) {
+    document.getElementById('t2-wrap').innerHTML = '<div class="empty">no rows match</div>';
+    return;
+  }
+
+  function th(col, label) {
+    const cls = t2SortCol === col ? 'sort-'+t2SortDir : '';
+    return `<th class="${cls}" onclick="sortT2('${col}')">${label}</th>`;
+  }
+
+  document.getElementById('t2-wrap').innerHTML = `
+    <table id="t2-table">
+      <thead><tr>
+        ${th('joinType','Join Status')}
+        ${th('player','Player')}
+        ${th('variant','Variant')}
+        ${th('population','Set Math Pop')}
+        ${th('piAvgPrice','PI Avg Price')}
+        ${th('bestPrice','Best Price')}
+        ${th('recency','Recency')}
+        ${th('totalSales','PI Sales')}
+        ${th('avg30d','30d Avg')}
+        ${th('avg90d','90d Avg')}
+        <th>In Math</th>
+        <th>In PI</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td>${joinBadge(r.joinType)}</td>
+          <td class="td-player">${r.player}</td>
+          <td><span class="v-tag v-${r.variant.toLowerCase().replace(/\s+/g,'-').replace('bet on women','betonwomen')}">${r.variant}</span></td>
+          <td class="td-pop">${r.population != null ? '/'+r.population : '<span style="color:var(--muted2)">—</span>'}</td>
+          <td class="${r.piAvgPrice ? 'td-price' : 'td-price-none'}">${r.piAvgPrice ? '$'+r.piAvgPrice.toLocaleString() : '—'}</td>
+          <td class="${r.bestPrice ? 'td-price' : 'td-price-none'}">${r.bestPrice ? '$'+r.bestPrice.toLocaleString() : '—'}</td>
+          <td class="td-recency">${r.recency || '—'}</td>
+          <td class="td-sales">${r.totalSales || '—'}</td>
+          <td class="${r.avg30d ? 'td-price' : 'td-price-none'}">${r.avg30d ? '$'+r.avg30d.toLocaleString() : '—'}</td>
+          <td>${r.avg90d ? '$'+r.avg90d.toLocaleString() : '—'}</td>
+          <td>${r.inMath ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--muted2)">—</span>'}</td>
+          <td>${r.inPI   ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--muted2)">—</span>'}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CSV download
+// ─────────────────────────────────────────────────────────────────────────────
+function downloadCSV(which) {
+  const tableId = which === 't1' ? 't1-table' : 't2-table';
+  const table = document.getElementById(tableId);
+  if (!table) return;
+
+  const rows = [];
+  const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim().replace(/[▲▼]/g,'').trim());
+  rows.push(headers);
+
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const cells = [...tr.querySelectorAll('td')].map(td => {
+      const text = td.textContent.trim();
+      // Wrap in quotes if contains comma
+      return text.includes(',') ? `"${text}"` : text;
+    });
+    rows.push(cells);
+  });
+
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ghostladder_${which}_${activeSet.replace(/\s+/g,'_').replace(/[^a-z0-9_]/gi,'')}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function typeBadge(t) {
+  if (t === 'real') return '<span class="badge badge-real">real</span>';
+  if (t === 'proj') return '<span class="badge badge-proj">projected</span>';
+  return '<span class="badge badge-gap">no price</span>';
+}
+
+function joinBadge(t) {
+  if (t === 'matched') return '<span class="badge badge-real">matched</span>';
+  if (t === 'orphan')  return '<span class="badge badge-orphan">orphan</span>';
+  return '<span class="badge badge-gap">gap</span>';
+}
+
+function confClass(c) {
+  if (!c) return '';
+  if (c === 'High')       return 'conf-high';
+  if (c === 'Medium')     return 'conf-medium';
+  if (c === 'Medium-Low') return 'conf-medlow';
+  if (c === 'Low')        return 'conf-low';
+  return 'conf-verylow';
+}
+
+function pct(n, total) { return total > 0 ? Math.round(n/total*100) : 0; }
+function esc(s) { return String(s).replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
+
+loadAll();
+</script>
+</body>
+</html>
