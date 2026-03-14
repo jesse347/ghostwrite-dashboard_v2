@@ -581,27 +581,57 @@ function renderStats() {
   const cfg = getSetConfig(activeSet) || { casePrice:500, casePack:12 };
   const products = (allData.products||[]).filter(p => p.set===activeSet && p.player && p.player!=='Unknown');
   const { projections } = buildProjections(activeSet, products);
+  const mathRows = (allData.setMath && allData.setMath[activeSet]) || [];
 
   // Avg base
   const basePrices = products.filter(p => p.variant==='Base' && p.avgPrice>0).map(p => p.avgPrice);
   const avgBase = basePrices.length ? Math.round(basePrices.reduce((a,b)=>a+b,0)/basePrices.length) : 0;
 
-  // Expected value from pool math (point estimate)
+  // Pool math
   const { hitPool, fullPool } = buildSplitPools(activeSet);
+
+  // Avg hit value — population-weighted across all parallel variants
+  // Uses set_math populations so weights are accurate, not POP_DEFAULTS
+  let wSum = 0, wTotal = 0;
+  const VARIANT_ORDER_HIT = ['Fire','Chrome','Gold','Emerald','Vides','Victory','SP','Bet On Women'];
+  VARIANT_ORDER_HIT.forEach(variant => {
+    // Sum population for this variant from set_math
+    const variantPop = mathRows.filter(r => r.variant === variant).reduce((s,r) => s + r.population, 0);
+    if (!variantPop) return;
+    // Gather prices for this variant (real + projected)
+    const seen = new Set();
+    const prices = [];
+    products.filter(p => p.variant === variant && p.avgPrice > 0).forEach(p => {
+      seen.add(p.player); prices.push(p.avgPrice);
+    });
+    // Add projected prices for players without real data
+    mathRows.filter(r => r.variant === variant && !seen.has(r.player)).forEach(r => {
+      const proj = projections[r.player+'|||'+variant];
+      if (proj && proj.price > 0) { seen.add(r.player); prices.push(proj.price); }
+    });
+    if (!prices.length) return;
+    const avg = prices.reduce((a,b)=>a+b,0) / prices.length;
+    wSum   += avg * variantPop;
+    wTotal += variantPop;
+  });
+  const avgHit = wTotal > 0 ? Math.round(wSum / wTotal) : 0;
+
+  // Expected case value + ROI
   let expectedValue = 0;
   if (hitPool.length && fullPool.length) {
-    const hitAvg  = hitPool.reduce((s,f)=>s+f.price,0)/hitPool.length;
-    const fullAvg = fullPool.reduce((s,f)=>s+f.price,0)/fullPool.length;
+    const hitAvg  = hitPool.reduce((s,f)=>s+f.price,0) / hitPool.length;
+    const fullAvg = fullPool.reduce((s,f)=>s+f.price,0) / fullPool.length;
     expectedValue = Math.round(hitAvg + fullAvg*(cfg.casePack-1));
   }
   const expectedRoi = expectedValue > 0 ? Math.round(((expectedValue-cfg.casePrice)/cfg.casePrice)*100) : 0;
 
-  // Estimated fraction of pool
-  const estCount = fullPool.filter(f=>f.isEstimated).length;
-  const estPct = fullPool.length > 0 ? Math.round(estCount/fullPool.length*100) : 0;
-
-  // Highest single card value in pool
-  const maxCard = fullPool.length ? Math.max(...fullPool.map(f=>f.price)) : 0;
+  // Data coverage (unique combos, not pool slots — more meaningful)
+  const mathCombos = mathRows.length;
+  const realCombos = mathRows.filter(r => {
+    const pi = products.find(p => p.player===r.player && p.variant===r.variant);
+    return pi && pi.avgPrice > 0;
+  }).length;
+  const covPct = mathCombos > 0 ? Math.round(realCombos/mathCombos*100) : 0;
 
   document.getElementById('stats-row').innerHTML = `
     <div class="stat-card">
@@ -612,22 +642,22 @@ function renderStats() {
     <div class="stat-card">
       <div class="stat-label">avg base value</div>
       <div class="stat-value accent">$${avgBase||'—'}</div>
-      <div class="stat-sub">${basePrices.length} players tracked</div>
+      <div class="stat-sub">${basePrices.length} players w/ data</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">point estimate</div>
+      <div class="stat-label">avg hit value</div>
+      <div class="stat-value" style="color:var(--gold)">$${avgHit||'—'}</div>
+      <div class="stat-sub">population-weighted · parallels only</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">expected case ROI</div>
       <div class="stat-value ${expectedRoi>=0?'green':'red'}">${expectedRoi>=0?'+':''}${expectedRoi}%</div>
-      <div class="stat-sub">expected value $${expectedValue}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">max chase value</div>
-      <div class="stat-value gold">$${maxCard ? maxCard.toLocaleString() : '—'}</div>
-      <div class="stat-sub">highest single card in pool</div>
+      <div class="stat-sub">est. value $${expectedValue}</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">data coverage</div>
-      <div class="stat-value" style="color:${estPct>50?'var(--vides)':'var(--green)'}">${100-estPct}%</div>
-      <div class="stat-sub">${estPct}% of pool is projected</div>
+      <div class="stat-value" style="color:${covPct<50?'var(--vides)':covPct<80?'var(--orange)':'var(--green)'}">${covPct}%</div>
+      <div class="stat-sub">${realCombos} of ${mathCombos} combos have real sales</div>
     </div>`;
 }
 
