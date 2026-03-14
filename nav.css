@@ -21,7 +21,10 @@ header {
 .logo em { color: var(--accent); font-style: normal; }
 
 /* ── Nav links ── */
-.nav { display: flex; gap: 0; align-items: center; }
+.nav {
+  display: flex; gap: 0; align-items: center;
+  position: absolute; left: 50%; transform: translateX(-50%);
+}
 .nav a {
   font-family: var(--display); font-size: 11px;
   letter-spacing: 3px; text-transform: uppercase;
@@ -65,78 +68,3 @@ header {
 .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .scraped-badge { font-size: 9px; letter-spacing: 1px; color: var(--muted); }
-
-/* ── Page header block (title + ? button + explainer) ── */
-.page-header-block {
-  padding: 28px 32px 0;
-  position: relative;
-}
-.page-header-title {
-  font-family: var(--display);
-  font-size: 28px;
-  letter-spacing: 1px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  line-height: 1;
-  margin-bottom: 8px;
-}
-.page-header-sub {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 24px;
-}
-
-/* ── ? button ── */
-.explainer-btn {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #000;
-  border: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.15s;
-  padding: 0;
-  line-height: 1;
-}
-.explainer-btn:hover { transform: scale(1.15); }
-
-/* ── Sticky-note explainer panel — hidden by default ── */
-.explainer-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% - 16px);
-  left: 32px;
-  z-index: 200;
-  width: 400px;
-  background: #f7f068;
-  color: #1a1a1a;
-  padding: 20px 22px 18px;
-  box-shadow: 4px 6px 0 rgba(0,0,0,0.5);
-  transform: rotate(-0.5deg);
-}
-.explainer-panel.visible { display: block; }
-.explainer-panel p {
-  font-family: 'Instrument Serif', 'Georgia', serif;
-  font-size: 17px;
-  line-height: 1.55;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-}
-.explainer-panel p:last-child { margin-bottom: 0; }
-.explainer-panel em  { font-style: italic; }
-.explainer-panel a   { color: #1a1a1a; font-weight: 700; }
-.explainer-panel a:hover { text-decoration: underline; }
-.explainer-close {
-  position: absolute; top: 10px; right: 12px;
-  background: none; border: none; cursor: pointer;
-  font-size: 14px; color: rgba(0,0,0,0.4); padding: 2px 6px;
-}
-.explainer-close:hover { color: #1a1a1a; }
