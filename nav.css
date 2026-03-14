@@ -23,8 +23,11 @@ header {
 /* ── Nav links ── */
 .nav {
   display: flex; gap: 0; align-items: center;
-  position: absolute; left: 50%; transform: translateX(-50%);
+  position: absolute; left: 0; right: 0;
+  justify-content: center;
+  pointer-events: none;
 }
+.nav a { pointer-events: all; }
 .nav a {
   font-family: var(--display); font-size: 11px;
   letter-spacing: 3px; text-transform: uppercase;
