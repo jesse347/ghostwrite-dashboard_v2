@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ghostladder · market intel</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="nav.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
@@ -46,27 +47,8 @@ body::after {
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────────── */
-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: rgba(8,8,8,0.94);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  padding: 0 32px;
-  height: 56px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
 
-.logo {
-  font-family: var(--display);
-  font-size: 20px;
-  letter-spacing: 3px;
-  color: var(--text);
-}
-.logo em { color: var(--accent); font-style: normal; }
+.
 
 .header-right {
   display: flex;
@@ -546,7 +528,6 @@ header {
   padding-top: 6px;
 }
 
-
 /* ── Movers + Top Players tables ──────────────────────────────────────────── */
 .movers-table, .top-players-table { width: 100%; border-collapse: collapse; }
 .movers-table th, .top-players-table th {
@@ -582,7 +563,6 @@ header {
 .top-player-bar { height: 100%; background: var(--accent); }
 /* ── League tab filter bar ───────────────────────────────────────────────────── */
 .filter-bar { margin-bottom: 0; }
-
 
 /* ── Power Rankings ──────────────────────────────────────────────────────────── */
 .power-grid {
@@ -630,184 +610,8 @@ header {
    ══════════════════════════════════════════════════ */
 
 /* ── Sticky header ── */
-header {
-  position: sticky !important;
-  top: 0; z-index: 100;
-  background: rgba(8,8,8,0.96) !important;
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border) !important;
-  padding: 0 32px !important;
-  height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
 
 /* ── Wordmark ── */
-.logo {
-  font-family: var(--display) !important;
-  font-size: 20px !important;
-  letter-spacing: 3px !important;
-  color: var(--text) !important;
-  text-decoration: none !important;
-  flex-shrink: 0;
-}
-.logo em { color: var(--accent) !important; font-style: normal !important; }
-
-/* ── Nav links ── */
-.nav {
-  display: flex !important;
-  gap: 0 !important;
-  align-items: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: none !important;
-  height: 56px !important;
-}
-.nav a {
-  font-family: var(--mono), monospace !important;
-  font-size: 10px !important;
-  letter-spacing: 1.5px !important;
-  text-transform: uppercase !important;
-  color: var(--muted) !important;
-  text-decoration: none !important;
-  padding: 0 18px !important;
-  height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  transition: color 0.15s !important;
-  border-bottom: 2px solid transparent !important;
-  white-space: nowrap !important;
-}
-.nav a:hover { color: var(--text) !important; }
-.nav a.active {
-  color: var(--text) !important;
-  border-bottom-color: var(--accent) !important;
-}
-
-/* ── Beta badge ── */
-.beta-badge {
-  font-size: 7px !important;
-  letter-spacing: 1px !important;
-  background: var(--accent) !important;
-  color: #000 !important;
-  padding: 1px 5px !important;
-  border-radius: 2px !important;
-  font-weight: 700 !important;
-  vertical-align: middle !important;
-}
-
-/* ── Header right ── */
-.header-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 16px !important;
-  flex-shrink: 0 !important;
-}
-
-/* ── Page header block (below nav, inside .page) ── */
-.page-header-block {
-  margin-bottom: 28px;
-  position: relative;
-}
-.page-header-title {
-  font-family: var(--display), sans-serif;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  line-height: 1;
-}
-.page-header-sub {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 8px;
-}
-
-/* ── Explainer button ── */
-.explainer-btn {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #000;
-  border: none;
-  cursor: pointer;
-  font-family: var(--mono), monospace;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.15s, background 0.15s;
-  line-height: 1;
-  padding: 0;
-}
-.explainer-btn:hover { transform: scale(1.15); }
-.explainer-btn.open { background: #000; color: var(--accent); border: 1.5px solid var(--accent); }
-
-/* ── Sticky note explainer panel ── */
-.explainer-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  z-index: 200;
-  width: 420px;
-  background: #f7f068;
-  color: #1a1a1a;
-  padding: 20px 22px 18px;
-  box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
-  transform: rotate(-0.5deg);
-}
-.explainer-panel::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 32px;
-  width: 40px; height: 6px;
-  background: rgba(0,0,0,0.15);
-  border-radius: 0 0 2px 2px;
-}
-.explainer-panel.visible { display: block; }
-.explainer-panel p {
-  font-family: 'Instrument Serif', 'Georgia', serif;
-  font-size: 18px;
-  line-height: 1.55;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-}
-.explainer-panel p:last-child { margin-bottom: 0; }
-.explainer-panel em { font-style: italic; }
-.explainer-panel a { color: #1a1a1a; font-weight: 700; }
-.explainer-panel a:hover { text-decoration: underline; }
-.explainer-close {
-  position: absolute; top: 10px; right: 12px;
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; color: rgba(0,0,0,0.4); padding: 2px 6px;
-}
-.explainer-close:hover { color: #1a1a1a; }
-
-/* ── Section label (shared) ── */
-.section-label {
-  font-size: 9px !important;
-  letter-spacing: 3px !important;
-  text-transform: uppercase !important;
-  color: var(--muted) !important;
-  margin-bottom: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-.section-label::after {
-  content: '' !important;
-  flex: 1 !important;
-  height: 1px !important;
-  background: var(--border) !important;
-}
 
 </style>
 </head>
@@ -885,7 +689,6 @@ header {
   <!-- Recent sales feed -->
   <div class="section-label">top sales · last 30 days <span id="recent-count" style="margin-left:8px;color:var(--muted2);font-size:9px;letter-spacing:1px;text-transform:none"></span></div>
   <div class="sales-feed" id="recent-sales"><div class="loading" style="grid-column:1/-1"></div></div>
-
 
   <!-- Power Rankings -->
   <div class="panel" style="margin-bottom:24px">
@@ -1175,7 +978,6 @@ function renderVariantAveragesByLeague(products, league) {
     </div>`).join('');
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Monthly sales volume chart
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1445,8 +1247,6 @@ function renderPriceChart(sales) {
   });
 }
 
-
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Power Rankings
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1675,7 +1475,6 @@ function renderProducts() {
     </div>`;
   }).join('');
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 
