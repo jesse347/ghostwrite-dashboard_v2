@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ghostladder · price guide</title>
+<title>ghostwrite · price guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -393,6 +393,10 @@ header {
   background: var(--border) !important;
 }
 
+.page-header-block { padding: 20px 32px 0; margin-bottom: 0; }
+.page-header-title { font-size: 22px; }
+.page { height: calc(100vh - 56px) !important; }
+
 </style>
 </head>
 <body>
@@ -407,27 +411,19 @@ header {
     <a href="case-sim.html">ROI SIM <span class="beta-badge">BETA</span></a>
   </nav>
 </header>
-  <div class="nav-links">
-    <a href="index.html">← dashboard</a>
-    <a href="heatmap.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">heat map →</a>
-    <a href="case-sim.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">case sim →</a>
-    <a href="guide.html" class="active">price guide</a>
-  </div>
-</div>
 
-<div class="page">
 <div class="page-header-block">
   <div class="page-header-title">
     PRICE GUIDE
     <button class="explainer-btn" onclick="toggleExplainer()" title="What is this?">?</button>
   </div>
-  <div class="page-header-sub">every tracked player · variant · set · with 30d, 90d & all-time averages</div>
+  <div class="page-header-sub">every tracked player · variant · set · with 30d, 90d &amp; all-time averages</div>
   <div class="explainer-panel" id="explainer-panel">
     <button class="explainer-close" onclick="toggleExplainer()">✕</button>
-    <p>Every player/variant combination we track, with 30-day, 90-day, and all-time average sale prices. Click any row to see individual sales history.</p><p>Data comes from <a href="index.html">Sales Intel</a>. For what's currently listed on eBay, see <a href="listings.html">Listings Intel →</a></p>
+    <p>Every player/variant combination we track, with 30-day, 90-day, and all-time averages. Click any row to see the full sales history.</p><p>Data comes from <a href="index.html">Sales Intel</a>. For active eBay listings, see <a href="listings.html">Listings Intel →</a></p>
   </div>
 </div>
-
+<div class="page">
 
   <!-- Left: Product list -->
   <div class="product-list" id="product-list">
@@ -469,53 +465,7 @@ header {
 </div>
 
 <script>
-const SB_URL = 'https://sabzbyuqrondoayhwoth.supabase.co';
-const SB_KEY = 'sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
-const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
-
-async function rpc(fn, p={}) {
-  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST',headers:SB_H,body:JSON.stringify(p)});
-  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
-  return r.json();
-}
-// Parse a date string in local time (avoids UTC midnight rollback)
-// Handles both YYYY-MM-DD and full ISO timestamps from Supabase
-function parseDate(str) {
-  if (!str) return null;
-  // Strip any time component — take only the YYYY-MM-DD part
-  const datePart = String(str).substring(0, 10);
-  // Append local midnight so JS treats it as local time, not UTC
-  const d = new Date(datePart + 'T00:00:00');
-  return isNaN(d.getTime()) ? null : d;
-}
-
-async function sbFetch(table, params) {
-  const qs = Object.entries(params).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}&order=date.desc`, {headers:SB_H});
-  if (!r.ok) throw new Error(`${table}: ${r.status}`);
-  return r.json();
-}
-
-async function sbPatch(table, match, data) {
-  const qs = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
-  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {
-    method:'PATCH', headers:{...SB_H,'Prefer':'return=minimal'}, body:JSON.stringify(data)
-  });
-  if (!r.ok) throw new Error('PATCH ' + r.status);
-}
-
-function normProduct(r) {
-  const setStr = (r.set_name || '').toUpperCase();
-  return {
-    set: r.set_name, player: r.player, variant: r.variant,
-    totalSales: +r.total_sales || 0, avgPrice: +r.avg_price || 0,
-    avg30d: +r.avg_30d || 0, sales30d: +r.sales_30d || 0,
-    avg90d: +r.avg_90d || 0, sales90d: +r.sales_90d || 0,
-    lastSaleDate: r.last_sale_date, lastSalePrice: +r.last_sale_price || 0,
-    retail: +r.retail_price || 0,
-    multiplier: (r.retail_price && r.avg_price) ? Math.round(+r.avg_price / +r.retail_price * 10) / 10 : 0,
-  };
-}
+const DATA_URL = 'https://script.google.com/macros/s/AKfycbzCIVyCjVqCd6OfFGRFkb34mtgYeb7KaO6X5kkd8Mz3WHks9fzXQ0cjPXIhfJjUelBhBw/exec';
 
 const VARIANT_COLORS = {
   Fire: 'var(--fire)', Chrome: 'var(--chrome)', Gold: 'var(--gold)',
@@ -524,6 +474,7 @@ const VARIANT_COLORS = {
 const VARIANT_ORDER = ['Fire','Chrome','Gold','Emerald','Vides','Victory','Base'];
 
 let allProducts = [];
+let allListings = [];
 let activeLeague = 'ALL';
 let activeVariant = 'ALL';
 let sortCol = 'avgPrice';
@@ -532,32 +483,45 @@ let selectedProduct = null;
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const pi = await rpc('get_price_intelligence');
-    allProducts = pi.filter(r => r.player && r.player !== 'Unknown').map(normProduct);
-    // allListings loaded on-demand when drawer opens
-    buildVariantChips();
-  } catch(e) {
-    document.getElementById('table-wrap').innerHTML = '<div class="empty">failed to load data: ' + e.message + '</div>';
-    return;
-  }
+  const data = await fetchData();
+  allProducts = (data.products || []).filter(p => p.player && p.player !== 'Unknown');
+  allListings = (data.allListings || []).filter(l => l.player && l.player !== 'Unknown');
+  buildVariantChips();
 
+  // Check for ?player= URL param — pre-filter to that player
   const params = new URLSearchParams(window.location.search);
   const urlPlayer = params.get('player');
   if (urlPlayer) {
+    // Pre-fill search box with player name
     const searchEl = document.getElementById('search-input');
     if (searchEl) searchEl.value = urlPlayer;
   }
+
   applyFilters();
+
+  // After table renders, if a player was specified, open their Base drawer
   if (urlPlayer) {
     const match = allProducts.find(p =>
       p.player.toLowerCase() === urlPlayer.toLowerCase() && p.variant === 'Base'
     ) || allProducts.find(p =>
       p.player.toLowerCase() === urlPlayer.toLowerCase()
     );
-    if (match) setTimeout(() => openDrawer(match), 100);
+    if (match) {
+      setTimeout(() => openDrawer(match), 100);
+    }
   }
 });
+
+async function fetchData() {
+  try {
+    const res = await fetch(DATA_URL, { method: 'GET', redirect: 'follow' });
+    const text = await res.text();
+    return JSON.parse(text);
+  } catch(e) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty">failed to load data</div>';
+    return { products: [], allListings: [] };
+  }
+}
 
 // ── Variant chips ────────────────────────────────────────────────────────────
 function buildVariantChips() {
@@ -667,15 +631,26 @@ function sortBy(col) {
 }
 
 // ── Drawer ───────────────────────────────────────────────────────────────────
-async function openDrawer(product) {
+function openDrawer(product) {
   selectedProduct = product;
+
+  // Update selected row highlight
   applyFilters();
 
+  // Get listings for this product
+  const listings = allListings.filter(l =>
+    l.set === product.set &&
+    l.player === product.player &&
+    l.variant === product.variant
+  ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  // Header
   const vClass = 'v-' + (product.variant||'base').toLowerCase();
   document.getElementById('drawer-title').innerHTML =
     `${product.player} <span class="v-tag ${vClass}" style="margin-left:6px">${product.variant}</span>`;
   document.getElementById('drawer-subtitle').textContent = product.set;
 
+  // Stats
   document.getElementById('drawer-stats').innerHTML = `
     <div><div class="drawer-stat-label">Avg Price</div><div class="drawer-stat-value">${product.avgPrice ? '$' + Math.round(product.avgPrice) : '—'}</div></div>
     <div><div class="drawer-stat-label">Last Sale</div><div class="drawer-stat-value">${product.lastSalePrice ? '$' + Math.round(product.lastSalePrice) : '—'}</div></div>
@@ -683,29 +658,16 @@ async function openDrawer(product) {
     <div><div class="drawer-stat-label">30d Sales</div><div class="drawer-stat-value">${product.sales30d || 0}</div></div>
   `;
 
-  document.getElementById('drawer-listings').innerHTML = '<div class="loading-wrap"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>';
+  // Listings
+  if (!listings.length) {
+    document.getElementById('drawer-listings').innerHTML = '<div class="empty">no listings found</div>';
+  } else {
+    document.getElementById('drawer-listings').innerHTML = listings.map(l => renderListingCard(l)).join('');
+  }
+
+  // Open drawer
   document.getElementById('drawer').classList.add('open');
   document.getElementById('product-list').classList.add('drawer-open');
-
-  try {
-    const rawListings = await rpc('get_sales_by_combo', {
-      p_set_name: product.set, p_player: product.player, p_variant: product.variant
-    });
-    // Normalize listing fields
-    const listings = rawListings.map(l => ({
-      id: l.id, price: +l.price || 0, date: l.date,
-      image: l.image_url, url: l.ebay_url, afa: l.afa_grade,
-      flagged: l.flagged, title: l.title || '',
-      set: l.set_name, player: l.player, variant: l.variant,
-    }));
-    if (!listings.length) {
-      document.getElementById('drawer-listings').innerHTML = '<div class="empty">no listings found</div>';
-    } else {
-      document.getElementById('drawer-listings').innerHTML = listings.map(l => renderListingCard(l)).join('');
-    }
-  } catch(e) {
-    document.getElementById('drawer-listings').innerHTML = '<div class="empty">failed to load listings</div>';
-  }
 }
 
 function closeDrawer() {
@@ -717,7 +679,6 @@ function closeDrawer() {
 
 // ── Listing card ─────────────────────────────────────────────────────────────
 function renderListingCard(listing) {
-  const saleId = listing.id;
   const flagClass = listing.flagged ? 'flagged' : '';
   const flagLabel = listing.flagged ? '⚑ flagged' : 'flag';
   const flagBtnClass = listing.flagged ? 'flagged' : '';
@@ -728,14 +689,14 @@ function renderListingCard(listing) {
     : `<div class="listing-img-placeholder">👻</div>`;
 
   const dateStr = listing.date
-    ? parseDate(listing.date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
+    ? new Date(listing.date).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'})
     : '—';
 
   const linkHtml = listing.url
     ? `<a class="listing-link" href="${listing.url}" target="_blank" rel="noopener">↗ view listing</a>`
     : '';
 
-  return `<div class="listing-card ${flagClass}" id="card-${saleId}">
+  return `<div class="listing-card ${flagClass}" id="card-${listing.rowIndex}">
     ${imgHtml}
     <div class="listing-body">
       <div class="listing-title">${listing.title}</div>
@@ -748,33 +709,53 @@ function renderListingCard(listing) {
       </div>
     </div>
     <div class="listing-actions">
-      <button class="flag-btn ${flagBtnClass}" onclick="toggleFlag(event, '${saleId}', ${listing.flagged})">${flagLabel}</button>
+      <button class="flag-btn ${flagBtnClass}" onclick="toggleFlag(event, ${listing.rowIndex}, ${listing.flagged})">${flagLabel}</button>
     </div>
   </div>`;
 }
 
 // ── Flagging ─────────────────────────────────────────────────────────────────
-async function toggleFlag(event, saleId, currentlyFlagged) {
+async function toggleFlag(event, rowIndex, currentlyFlagged) {
   event.stopPropagation();
   const newFlagged = !currentlyFlagged;
 
   // Optimistic UI update
-  const card = document.getElementById('card-' + saleId);
+  const card = document.getElementById('card-' + rowIndex);
   const btn = card.querySelector('.flag-btn');
   if (newFlagged) {
-    card.classList.add('flagged'); btn.classList.add('flagged'); btn.textContent = '⚑ flagged';
+    card.classList.add('flagged');
+    btn.classList.add('flagged');
+    btn.textContent = '⚑ flagged';
   } else {
-    card.classList.remove('flagged'); btn.classList.remove('flagged'); btn.textContent = 'flag';
+    card.classList.remove('flagged');
+    btn.classList.remove('flagged');
+    btn.textContent = 'flag';
   }
 
+  // Update local data
+  const listing = allListings.find(l => l.rowIndex === rowIndex);
+  if (listing) listing.flagged = newFlagged;
+
+  // Write to sheet via Apps Script
   try {
-    await sbPatch('sales', {id: saleId}, {flagged: newFlagged});
+    // Google Apps Script doPost requires no-cors mode
+    await fetch(DATA_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ rowIndex, flagged: newFlagged }),
+    });
   } catch(e) {
     // Revert on error
+    if (listing) listing.flagged = currentlyFlagged;
     if (newFlagged) {
-      card.classList.remove('flagged'); btn.classList.remove('flagged'); btn.textContent = 'flag';
+      card.classList.remove('flagged');
+      btn.classList.remove('flagged');
+      btn.textContent = 'flag';
     } else {
-      card.classList.add('flagged'); btn.classList.add('flagged'); btn.textContent = '⚑ flagged';
+      card.classList.add('flagged');
+      btn.classList.add('flagged');
+      btn.textContent = '⚑ flagged';
     }
     console.error('Flag failed:', e);
   }
