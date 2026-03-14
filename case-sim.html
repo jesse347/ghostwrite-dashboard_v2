@@ -286,11 +286,19 @@ async function rpc(fn, p={}) {
   if (!r.ok) throw new Error(`${fn}: ${r.status}`);
   return r.json();
 }
-// Parse a YYYY-MM-DD date string in local time (avoids UTC midnight rollback)
+async function sbGet(table, qs) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {headers:SB_H});
+  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  return r.json();
+}
+// Parse a date string in local time (avoids UTC midnight rollback)
+// Handles both YYYY-MM-DD and full ISO timestamps from Supabase
 function parseDate(str) {
   if (!str) return null;
-  // Append local midnight so JS doesn't interpret as UTC
-  const d = new Date(str + 'T00:00:00');
+  // Strip any time component — take only the YYYY-MM-DD part
+  const datePart = String(str).substring(0, 10);
+  // Append local midnight so JS treats it as local time, not UTC
+  const d = new Date(datePart + 'T00:00:00');
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -301,6 +309,9 @@ const SET_CONFIG = [
 ];
 
 function getSetConfig(setName) {
+  if (allData && allData.sbSetConfig && allData.sbSetConfig[setName]) {
+    return allData.sbSetConfig[setName];
+  }
   const lower = (setName || '').toLowerCase();
   const ordered = [...SET_CONFIG].sort((a, b) => b.match.join('').length - a.match.join('').length);
   for (const cfg of ordered) {
@@ -336,9 +347,11 @@ let lastPulls = [];
 // ── Load ─────────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [pi, recentSales] = await Promise.all([
+    const [pi, recentSales, setsData, setMathData] = await Promise.all([
       rpc('get_price_intelligence'),
       rpc('get_recent_sales', {limit_rows: 500}),
+      sbGet('sets', 'select=id,name,case_price,figures_per_case,active&active=eq.true'),
+      sbGet('set_math', 'select=set_id,player,variant,population'),
     ]);
     const products = pi.filter(r => r.player && r.player !== 'Unknown').map(r => ({
       set: r.set_name, player: r.player, variant: r.variant,
@@ -347,13 +360,28 @@ async function loadData() {
       avg90d: +r.avg_90d || 0, sales90d: +r.sales_90d || 0,
       lastSaleDate: r.last_sale_date, lastSalePrice: +r.last_sale_price || 0,
     }));
-    // Normalize recent sales for drawer listing view
     const allListings = recentSales.filter(r => r.player && r.player !== 'Unknown').map(r => ({
       set: r.set_name, player: r.player, variant: r.variant,
       price: +r.price || 0, date: r.date, image: r.image_url,
       url: r.ebay_url, afa: r.afa_grade, title: '',
     }));
-    allData = { products, allListings, aiModelOutput: null };
+    // Build set_id -> name lookup
+    const setIdToName = {};
+    setsData.forEach(s => { setIdToName[s.id] = s.name; });
+    // Build set config from Supabase
+    const sbSetConfig = {};
+    setsData.forEach(s => {
+      sbSetConfig[s.name] = { casePrice: +s.case_price || 500, casePack: +s.figures_per_case || 12 };
+    });
+    // Build set_math: set_name -> [{player, variant, population}]
+    const setMath = {};
+    setMathData.forEach(row => {
+      const setName = setIdToName[row.set_id];
+      if (!setName) return;
+      if (!setMath[setName]) setMath[setName] = [];
+      setMath[setName].push({ player: row.player, variant: row.variant, population: +row.population });
+    });
+    allData = { products, allListings, aiModelOutput: null, sbSetConfig, setMath };
     initPage();
   } catch(e) {
     document.getElementById('main-content').innerHTML =
@@ -362,16 +390,18 @@ async function loadData() {
 }
 
 function initPage() {
-  const allSetNames = [...new Set((allData.products||[])
+  const setsWithMath = Object.keys(allData.setMath || {});
+  const setsWithPI   = [...new Set((allData.products||[])
     .filter(p => p.player && p.player !== 'Unknown' && p.set).map(p => p.set))];
-  const availableSets = allSetNames.filter(s => getSetConfig(s) !== null);
+  const availableSets = setsWithMath.filter(s =>
+    setsWithPI.includes(s) || (allData.sbSetConfig && allData.sbSetConfig[s])
+  );
   if (!availableSets.length) {
     document.getElementById('main-content').innerHTML =
-      '<div class="loading-state" style="color:#ff4455">no matching sets found<br>' +
-      '<span style="font-size:9px;color:#666;margin-top:8px;display:block">sets: ' + allSetNames.slice(0,8).join(', ') + '</span></div>';
+      '<div class="loading-state" style="color:#ff4455">no sets found with roster data</div>';
     return;
   }
-  activeSet = availableSets[0];
+  activeSet = availableSets.find(s => setsWithPI.includes(s)) || availableSets[0];
   renderPage(availableSets);
 }
 
@@ -565,17 +595,21 @@ function buildPool(setName) {
   const products = (allData.products||[]).filter(p => p.set===setName && p.player && p.player!=='Unknown');
   const { projections } = buildProjections(setName, products);
   const pool = []; const poolByVariant = {};
-  [...new Set(products.map(p=>p.player))].forEach(player => {
-    products.filter(p=>p.player===player).forEach(pv => {
-      const pop = POP_DEFAULTS[pv.variant]; if (!pop) return;
-      const price = getPrice(player, pv.variant, products, projections); if (!price) return;
-      for (let i=0; i<pop; i++) {
-        pool.push({ player, variant: pv.variant, price: price.value,
-          isEstimated: price.estimated, confidence: price.confidence,
-          projData: price.projData||null, realData: price.realData||null });
-      }
-      poolByVariant[pv.variant] = (poolByVariant[pv.variant]||0)+pop;
-    });
+  // Use set_math as sole source of truth for roster + populations
+  const mathRows = (allData.setMath && allData.setMath[setName]) || [];
+  if (!mathRows.length) {
+    console.warn('No set_math data for', setName);
+    return { pool, poolByVariant, totalPop: 0 };
+  }
+  mathRows.forEach(({ player, variant, population }) => {
+    if (!player || player === 'Unknown' || !population) return;
+    const price = getPrice(player, variant, products, projections); if (!price) return;
+    for (let i=0; i<population; i++) {
+      pool.push({ player, variant, price: price.value,
+        isEstimated: price.estimated, confidence: price.confidence,
+        projData: price.projData||null, realData: price.realData||null });
+    }
+    poolByVariant[variant] = (poolByVariant[variant]||0)+population;
   });
   return { pool, poolByVariant, totalPop: pool.length };
 }
@@ -614,7 +648,10 @@ function buildProjections(setName, setProducts) {
   const byPlayer = {};
   setProducts.forEach(p => { if (!byPlayer[p.player]) byPlayer[p.player]={}; byPlayer[p.player][p.variant]=p; });
 
-  const allVariants = [...new Set(setProducts.map(p=>p.variant))];
+  const mathRows = (allData.setMath && allData.setMath[setName]) || [];
+  const allVariants = mathRows.length
+    ? [...new Set(mathRows.map(r=>r.variant))]
+    : [...new Set(setProducts.map(p=>p.variant))];
   const crossRatios = {};
   allVariants.forEach(vA => allVariants.forEach(vB => {
     if (vA===vB) return;

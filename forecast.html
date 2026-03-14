@@ -341,6 +341,11 @@ async function rpc(fn, p={}) {
   if (!r.ok) throw new Error(`${fn}: ${r.status}`);
   return r.json();
 }
+async function sbGet(table, qs) {
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {headers:SB_H});
+  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  return r.json();
+}
 function parseDate(str) {
   if (!str) return null;
   const d = new Date(String(str).substring(0,10) + 'T00:00:00');
@@ -403,9 +408,11 @@ let activePulls = null;  // pulls shown in the case grid
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const [pi, recentSales] = await Promise.all([
+    const [pi, recentSales, setsData, setMathData] = await Promise.all([
       rpc('get_price_intelligence'),
       rpc('get_recent_sales', {limit_rows: 500}),
+      sbGet('sets', 'select=id,name,case_price,figures_per_case,active&active=eq.true'),
+      sbGet('set_math', 'select=set_id,player,variant,population'),
     ]);
     const products = pi.filter(r => r.player && r.player !== 'Unknown').map(r => ({
       set: r.set_name, player: r.player, variant: r.variant,
@@ -419,7 +426,23 @@ async function loadData() {
       price: +r.price || 0, date: r.date,
       image: r.image_url, url: r.ebay_url, afa: r.afa_grade, title: '',
     }));
-    allData = { products, allListings };
+    // Build set lookup: set_id -> set name
+    const setIdToName = {};
+    setsData.forEach(s => { setIdToName[s.id] = s.name; });
+    // Build set config from Supabase sets table
+    const sbSetConfig = {};
+    setsData.forEach(s => {
+      sbSetConfig[s.name] = { casePrice: +s.case_price || 500, casePack: +s.figures_per_case || 12 };
+    });
+    // Build set_math lookup: set_name -> [{player, variant, population}]
+    const setMath = {};
+    setMathData.forEach(row => {
+      const setName = setIdToName[row.set_id];
+      if (!setName) return;
+      if (!setMath[setName]) setMath[setName] = [];
+      setMath[setName].push({ player: row.player, variant: row.variant, population: +row.population });
+    });
+    allData = { products, allListings, sbSetConfig, setMath };
     initPage();
   } catch(e) {
     document.getElementById('main-content').innerHTML =
@@ -428,6 +451,11 @@ async function loadData() {
 }
 
 function getSetConfig(setName) {
+  // Prefer Supabase sets table data when available
+  if (allData && allData.sbSetConfig && allData.sbSetConfig[setName]) {
+    return allData.sbSetConfig[setName];
+  }
+  // Fallback to hardcoded config for matching during load
   const lower = (setName || '').toLowerCase();
   const ordered = [...SET_CONFIG].sort((a,b) => b.match.join('').length - a.match.join('').length);
   for (const cfg of ordered) {
@@ -437,15 +465,21 @@ function getSetConfig(setName) {
 }
 
 function initPage() {
-  const allSetNames = [...new Set((allData.products||[])
+  // Available sets = sets that exist in both set_math AND have PI data
+  const setsWithMath = Object.keys(allData.setMath || {});
+  const setsWithPI   = [...new Set((allData.products||[])
     .filter(p => p.player && p.player !== 'Unknown' && p.set).map(p => p.set))];
-  const availableSets = allSetNames.filter(s => getSetConfig(s) !== null);
+  // Show sets that have set_math AND either PI data or a known set config
+  const availableSets = setsWithMath.filter(s =>
+    setsWithPI.includes(s) || (allData.sbSetConfig && allData.sbSetConfig[s])
+  );
   if (!availableSets.length) {
     document.getElementById('main-content').innerHTML =
-      `<div class="loading-state" style="color:#ff4455">no configured sets found</div>`;
+      `<div class="loading-state" style="color:#ff4455">no sets found with roster data</div>`;
     return;
   }
-  activeSet = availableSets[0];
+  // Default to first set that also has PI data, otherwise first available
+  activeSet = availableSets.find(s => setsWithPI.includes(s)) || availableSets[0];
   renderPage(availableSets);
 }
 
@@ -1176,25 +1210,26 @@ function buildPool(setName) {
   const { projections } = buildProjections(setName, products);
   const pool = []; const poolByVariant = {};
 
-  // All variants present in this set (from PI data)
-  const setVariants = [...new Set(products.map(p => p.variant))].filter(v => POP_DEFAULTS[v]);
-  const allPlayers  = [...new Set(products.map(p => p.player))];
+  // Use set_math as the SOLE source of truth for which player+variant combos
+  // exist and what their actual populations are.
+  const mathRows = (allData.setMath && allData.setMath[setName]) || [];
 
-  // For every player x every variant in the set, attempt to get a price.
-  // Key fix: previously we only iterated variants a player already had PI rows
-  // for, so projected combos (missing from PI entirely) were never added to pool.
-  allPlayers.forEach(player => {
-    setVariants.forEach(variant => {
-      const pop = POP_DEFAULTS[variant]; if (!pop) return;
-      const price = getPrice(player, variant, products, projections);
-      if (!price) return;
-      for (let i = 0; i < pop; i++) {
-        pool.push({ player, variant, price: price.value,
-          isEstimated: price.estimated, confidence: price.confidence,
-          projData: price.projData||null, realData: price.realData||null });
-      }
-      poolByVariant[variant] = (poolByVariant[variant]||0) + pop;
-    });
+  if (!mathRows.length) {
+    // Fallback: if set_math not loaded, warn and return empty
+    console.warn('No set_math data for', setName, '— pool will be empty');
+    return { pool, poolByVariant, totalPop: 0 };
+  }
+
+  mathRows.forEach(({ player, variant, population }) => {
+    if (!player || player === 'Unknown' || !population) return;
+    const price = getPrice(player, variant, products, projections);
+    if (!price) return;
+    for (let i = 0; i < population; i++) {
+      pool.push({ player, variant, price: price.value,
+        isEstimated: price.estimated, confidence: price.confidence,
+        projData: price.projData||null, realData: price.realData||null });
+    }
+    poolByVariant[variant] = (poolByVariant[variant]||0) + population;
   });
   return { pool, poolByVariant, totalPop: pool.length };
 }
@@ -1220,7 +1255,11 @@ function bestPriceSim(p) {
 function buildProjections(setName, setProducts) {
   const byPlayer = {};
   setProducts.forEach(p => { if (!byPlayer[p.player]) byPlayer[p.player]={}; byPlayer[p.player][p.variant]=p; });
-  const allVariants = [...new Set(setProducts.map(p=>p.variant))];
+  // Universe of variants = what's in set_math for this set (not just what has PI rows)
+  const mathRows = (allData.setMath && allData.setMath[setName]) || [];
+  const allVariants = mathRows.length
+    ? [...new Set(mathRows.map(r=>r.variant))]
+    : [...new Set(setProducts.map(p=>p.variant))];
   const crossRatios = {};
   allVariants.forEach(vA => allVariants.forEach(vB => {
     if (vA===vB) return;
@@ -1245,9 +1284,13 @@ function buildProjections(setName, setProducts) {
   Object.entries(byPlayer).forEach(([player,variants]) => {
     const known=Object.keys(variants).filter(v=>variants[v]?.avgPrice>0);
     if (!known.length) return;
-    allVariants.forEach(tv => {
+    // Only project for variants this player actually has in set_math
+    const playerMathVariants = mathRows
+      .filter(r => r.player === player)
+      .map(r => r.variant);
+    const targetVariants = playerMathVariants.length ? playerMathVariants : allVariants;
+    targetVariants.forEach(tv => {
       if (variants[tv]?.avgPrice>0) return;
-      if (!setProducts.some(p=>p.variant===tv)) return;
       const anchors=[];
       known.forEach(sv => {
         const rd=setRatios[tv+'|||'+sv]; if (!rd) return;
