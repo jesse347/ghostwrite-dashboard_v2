@@ -235,6 +235,16 @@ body { color: var(--text); font-family: var(--mono); font-size: 12px; }
 .afa-badge { font-size: 8px; color: #ffd700; }
 .no-listings { font-size: 9px; color: var(--muted2); letter-spacing: 1px; padding: 16px 0; text-align: center; }
 
+.hit-tooltip {
+  position: fixed; z-index: 300;
+  background: var(--s1); border: 1px solid var(--border);
+  padding: 14px 16px; max-width: 300px; font-size: 9px;
+  color: var(--muted); line-height: 1.8; letter-spacing: 0.3px;
+  display: none; pointer-events: none;
+}
+.hit-tooltip strong { color: var(--text); display: block; margin-bottom: 6px; font-size: 10px; letter-spacing: 1px; }
+.hit-tooltip .formula { font-family: var(--mono); color: var(--accent); font-size: 8px; margin: 6px 0; line-height: 1.6; background: var(--s2); padding: 6px 8px; }
+.hit-tooltip .divider { border-top: 1px solid var(--border); margin: 8px 0; }
 @media (max-width: 700px) {
   .page { padding: 16px; }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
@@ -470,24 +480,25 @@ function renderStats() {
   const basePrices = products.filter(p => p.variant==='Base' && p.avgPrice>0).map(p => p.avgPrice);
   const avgBase = basePrices.length ? Math.round(basePrices.reduce((a,b)=>a+b,0)/basePrices.length) : 0;
 
-  // Population-weighted avg hit value across all parallels (real + projected)
+  // Avg hit value — two versions using set_math as population source
   const { projections } = buildProjections(activeSet, products);
-  let wSum = 0, wTotal = 0;
-  VARIANT_ORDER.filter(v => v!=='Base').forEach(variant => {
-    const pop = POP_DEFAULTS[variant]; if (!pop) return;
-    const seen = new Set();
-    const prices = [];
-    products.filter(p => p.variant===variant && p.avgPrice>0).forEach(p => { seen.add(p.player); prices.push(p.avgPrice); });
-    products.forEach(p => {
-      if (seen.has(p.player)) return;
-      const proj = projections[p.player+'|||'+variant];
-      if (proj && proj.price>0) { seen.add(p.player); prices.push(proj.price); }
-    });
-    if (!prices.length) return;
-    const avg = prices.reduce((a,b)=>a+b,0)/prices.length;
-    wSum += avg * pop; wTotal += pop;
+  const mathRows = (allData.setMath && allData.setMath[activeSet]) || [];
+  const nonBaseMath = mathRows.filter(r => r.variant !== 'Base' && r.population > 0);
+  let realGMV = 0, realPop = 0, fullGMV = 0, fullPop = 0;
+  nonBaseMath.forEach(({ player, variant, population }) => {
+    const pi = products.find(p => p.player===player && p.variant===variant);
+    const realPrice = (pi && pi.avgPrice>0) ? pi.avgPrice : null;
+    if (realPrice) { realGMV += population * realPrice; realPop += population; }
+    const proj = projections[player+'|||'+variant];
+    const usePrice = realPrice || (proj && proj.price>0 ? proj.price : null);
+    if (usePrice) { fullGMV += population * usePrice; fullPop += population; }
   });
-  const avgHit = wTotal>0 ? Math.round(wSum/wTotal) : 0;
+  const avgHitReal = realPop>0 ? Math.round(realGMV/realPop) : 0;
+  const avgHitFull = fullPop>0 ? Math.round(fullGMV/fullPop) : 0;
+  const hitRealCombos = nonBaseMath.filter(({player,variant}) =>
+    products.find(p => p.player===player && p.variant===variant && p.avgPrice>0)
+  ).length;
+  const hitTotalCombos = nonBaseMath.length;
 
   // Expected value using guaranteed-hit pool math
   const { hitPool, fullPool } = buildSplitPools(activeSet);
@@ -511,9 +522,20 @@ function renderStats() {
       <div class="stat-sub">${basePrices.length} players w/ data</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">avg hit value</div>
-      <div class="stat-value" style="color:var(--gold)">$${avgHit||'—'}</div>
-      <div class="stat-sub">population-weighted</div>
+      <div class="stat-label">avg hit value
+        <span style="font-size:8px;color:var(--muted);cursor:default;user-select:none" onmouseenter="showHitTooltip(event)" onmouseleave="hideHitTooltip()"> ⓘ</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <div>
+          <div class="stat-value" style="color:var(--gold)">${avgHitReal ? '$'+avgHitReal.toLocaleString() : '—'}</div>
+          <div class="stat-sub">real · ${hitRealCombos} combos</div>
+        </div>
+        <div style="color:var(--muted);font-size:16px;align-self:center">/</div>
+        <div>
+          <div class="stat-value" style="color:var(--orange);font-size:18px">${avgHitFull ? '$'+avgHitFull.toLocaleString() : '—'}</div>
+          <div class="stat-sub">+proj · ${hitTotalCombos} combos</div>
+        </div>
+      </div>
     </div>
     <div class="stat-card">
       <div class="stat-label">expected case ROI</div>
@@ -1007,6 +1029,43 @@ function resetSim() {
   isAnimating=false;
   document.getElementById('pull-btn').disabled=false;
   closeDrawer();
+}
+
+// ── Hit value tooltip ─────────────────────────────────────────────────────────
+function showHitTooltip(e) {
+  let tt = document.getElementById('hit-tooltip');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'hit-tooltip';
+    tt.className = 'hit-tooltip';
+    tt.innerHTML = `
+      <strong>How Avg Hit Value is calculated</strong>
+      For each non-Base player/variant combo in Set Math:<br>
+      multiply its <em>population</em> by its <em>price</em>,<br>
+      sum all products, divide by total non-Base population.
+      <div class="formula">
+        Σ (population × price)<br>
+        ────────────────────────<br>
+        Σ (population)
+      </div>
+      <div class="divider"></div>
+      <strong style="font-size:9px">Real data only (gold)</strong>
+      Only combos with verified eBay sales. Conservative.
+      <div class="divider"></div>
+      <strong style="font-size:9px">Incl. projected (orange)</strong>
+      Adds estimated prices for combos with no sales yet.<br>
+      Covers the full roster but carries more uncertainty.
+    `;
+    document.body.appendChild(tt);
+  }
+  tt.style.display = 'block';
+  const x = Math.min(e.clientX + 12, window.innerWidth - 320);
+  tt.style.left = x + 'px';
+  tt.style.top  = (e.clientY + 16) + 'px';
+}
+function hideHitTooltip() {
+  const tt = document.getElementById('hit-tooltip');
+  if (tt) tt.style.display = 'none';
 }
 
 loadData();
