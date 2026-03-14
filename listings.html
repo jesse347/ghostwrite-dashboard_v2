@@ -243,6 +243,192 @@ thead th.sort-desc::after { content: ' ▼'; color: var(--accent); }
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
   .two-col, .three-col { grid-template-columns: 1fr; }
 }
+
+/* ══════════════════════════════════════════════════
+   SHARED NAV + PAGE HEADER SYSTEM
+   ══════════════════════════════════════════════════ */
+
+/* ── Sticky header ── */
+header {
+  position: sticky !important;
+  top: 0; z-index: 100;
+  background: rgba(8,8,8,0.96) !important;
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border) !important;
+  padding: 0 32px !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* ── Wordmark ── */
+.logo {
+  font-family: var(--display) !important;
+  font-size: 20px !important;
+  letter-spacing: 3px !important;
+  color: var(--text) !important;
+  text-decoration: none !important;
+  flex-shrink: 0;
+}
+.logo em { color: var(--accent) !important; font-style: normal !important; }
+
+/* ── Nav links ── */
+.nav {
+  display: flex !important;
+  gap: 0 !important;
+  align-items: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: none !important;
+  height: 56px !important;
+}
+.nav a {
+  font-family: var(--mono), monospace !important;
+  font-size: 10px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  text-decoration: none !important;
+  padding: 0 18px !important;
+  height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: color 0.15s !important;
+  border-bottom: 2px solid transparent !important;
+  white-space: nowrap !important;
+}
+.nav a:hover { color: var(--text) !important; }
+.nav a.active {
+  color: var(--text) !important;
+  border-bottom-color: var(--accent) !important;
+}
+
+/* ── Beta badge ── */
+.beta-badge {
+  font-size: 7px !important;
+  letter-spacing: 1px !important;
+  background: var(--accent) !important;
+  color: #000 !important;
+  padding: 1px 5px !important;
+  border-radius: 2px !important;
+  font-weight: 700 !important;
+  vertical-align: middle !important;
+}
+
+/* ── Header right ── */
+.header-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Page header block (below nav, inside .page) ── */
+.page-header-block {
+  margin-bottom: 28px;
+  position: relative;
+}
+.page-header-title {
+  font-family: var(--display), sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  line-height: 1;
+}
+.page-header-sub {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ── Explainer button ── */
+.explainer-btn {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s, background 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+.explainer-btn:hover { transform: scale(1.15); }
+.explainer-btn.open { background: #000; color: var(--accent); border: 1.5px solid var(--accent); }
+
+/* ── Sticky note explainer panel ── */
+.explainer-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 200;
+  width: 420px;
+  background: #f7f068;
+  color: #1a1a1a;
+  padding: 20px 22px 18px;
+  box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
+  transform: rotate(-0.5deg);
+}
+.explainer-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 32px;
+  width: 40px; height: 6px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 0 0 2px 2px;
+}
+.explainer-panel.visible { display: block; }
+.explainer-panel p {
+  font-family: 'Instrument Serif', 'Georgia', serif;
+  font-size: 18px;
+  line-height: 1.55;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+}
+.explainer-panel p:last-child { margin-bottom: 0; }
+.explainer-panel em { font-style: italic; }
+.explainer-panel a { color: #1a1a1a; font-weight: 700; }
+.explainer-panel a:hover { text-decoration: underline; }
+.explainer-close {
+  position: absolute; top: 10px; right: 12px;
+  background: none; border: none; cursor: pointer;
+  font-size: 16px; color: rgba(0,0,0,0.4); padding: 2px 6px;
+}
+.explainer-close:hover { color: #1a1a1a; }
+
+/* ── Section label (shared) ── */
+.section-label {
+  font-size: 9px !important;
+  letter-spacing: 3px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  margin-bottom: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+.section-label::after {
+  content: '' !important;
+  flex: 1 !important;
+  height: 1px !important;
+  background: var(--border) !important;
+}
+
+.page-static-header { max-width: 1440px; margin: 0 auto; padding: 32px 32px 0; }
 </style>
 </head>
 <body>
@@ -250,11 +436,11 @@ thead th.sort-desc::after { content: ' ▼'; color: var(--accent); }
 <header>
   <div class="logo">ghost<em>ladder</em></div>
   <nav class="nav">
-    <a href="index.html">market intel</a>
-    <a href="guide.html">price guide</a>
-    <a href="heatmap.html">heat map</a>
-    <a href="listings.html" class="active">live market</a>
-    <a href="case-sim.html">case sim</a>
+    <a href="index.html">SALES INTEL</a>
+    <a href="listings.html" class="active">LISTINGS INTEL</a>
+    <a href="guide.html">PRICE GUIDE</a>
+    <a href="heatmap.html">SET MAP</a>
+    <a href="case-sim.html">ROI SIM <span class="beta-badge">BETA</span></a>
   </nav>
   <div class="header-right">
     <div class="scraped-badge" id="scraped-badge">—</div>
@@ -263,6 +449,20 @@ thead th.sort-desc::after { content: ' ▼'; color: var(--accent); }
   </div>
 </header>
 
+
+<div class="page-static-header">
+<div class="page-header-block">
+  <div class="page-header-title">
+    LIVE MARKET
+    <button class="explainer-btn" onclick="toggleExplainer()" title="What is this?">?</button>
+  </div>
+  <div class="page-header-sub">active ebay listings · scraped daily · classified & enriched</div>
+  <div class="explainer-panel" id="explainer-panel">
+    <button class="explainer-close" onclick="toggleExplainer()">✕</button>
+    <p>Live intel on all active eBay listings — updated daily.</p><p>For data on <em>completed</em> sales, see <a href="index.html">Sales Intel →</a></p>
+  </div>
+</div>
+</div>
 <div class="page" id="main">
   <div class="loading-overlay"><div class="spinner"></div>loading live market data</div>
 </div>
@@ -661,6 +861,26 @@ function median(sorted) {
 }
 
 loadData();
+
+function toggleExplainer() {
+  const panel = document.getElementById('explainer-panel');
+  const btn   = document.querySelector('.explainer-btn');
+  const isOpen = panel.classList.contains('visible');
+  panel.classList.toggle('visible', !isOpen);
+  if (btn) btn.classList.toggle('open', !isOpen);
+}
+// Close when clicking outside
+document.addEventListener('click', function(e) {
+  const panel = document.getElementById('explainer-panel');
+  const btn   = document.querySelector('.explainer-btn');
+  if (panel && panel.classList.contains('visible')) {
+    if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+      panel.classList.remove('visible');
+      if (btn) btn.classList.remove('open');
+    }
+  }
+});
+
 </script>
 </body>
 </html>
