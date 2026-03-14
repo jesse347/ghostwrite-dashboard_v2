@@ -543,17 +543,26 @@ function renderPage(sets) {
 }
 
 function renderSetSelector(sets) {
-  document.getElementById('set-selector').innerHTML = sets.map(s =>
-    `<button class="set-btn ${s===activeSet?'active':''}" onclick="switchSet('${s.replace(/'/g,"\\'")}')">
-      ${(getSetConfig(s)||{label:s}).label}
-    </button>`).join('');
+  document.getElementById('set-selector').innerHTML = sets.map(s => {
+    // Shorten long set names for the tab button
+    const shortName = s
+      .replace('Game Face', '').replace('2024-25','24-25').replace('2025-26','25-26')
+      .replace('2024','').replace('2025','').replace('2026','')
+      .trim().replace(/\s+/g,' ') || s;
+    return `<button class="set-btn ${s===activeSet?'active':''}" onclick="switchSet('${s.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">
+      ${shortName}
+    </button>`;
+  }).join('');
 }
 
 function switchSet(s) {
   activeSet = s; simResults = []; selectedBin = null; activePulls = null;
-  const sets = [...new Set((allData.products||[])
-    .filter(p => p.player && p.player!=='Unknown' && p.set).map(p=>p.set))]
-    .filter(s => getSetConfig(s)!==null);
+  const setsWithMath2 = Object.keys(allData.setMath || {});
+  const setsWithPI2   = [...new Set((allData.products||[])
+    .filter(p => p.player && p.player!=='Unknown' && p.set).map(p=>p.set))];
+  const sets = setsWithMath2.filter(s2 =>
+    setsWithPI2.includes(s2) || (allData.sbSetConfig && allData.sbSetConfig[s2])
+  );
   renderSetSelector(sets);
   renderStats();
   renderEmptyGrid();
@@ -758,55 +767,59 @@ function resetForecast() {
 // ─────────────────────────────────────────────────────────────────────────────
 function renderDistribution() {
   const cfg = getSetConfig(activeSet) || { casePrice: 500 };
-
-  // Bin all simulations
   const values = simResults.map(r => r.totalValue);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
-  const binMin = Math.floor(minVal / BIN_SIZE) * BIN_SIZE;
-  const binMax = Math.ceil(maxVal  / BIN_SIZE) * BIN_SIZE;
+  const sorted = [...values].sort((a,b) => a-b);
+
+  // ── Soft tail truncation ──────────────────────────────────────────────────
+  // Clip the visible X axis at p95 so the main distribution is readable.
+  // Sims above the cutoff go into a single "jackpot" overflow bucket shown
+  // at the far right with a striped pattern — honest but doesn't stretch the scale.
+  const TAIL_PCT  = 0.95;
+  const tailCutoff = sorted[Math.floor(sorted.length * TAIL_PCT)];
+  const mainValues = values.filter(v => v <= tailCutoff);
+  const tailSims   = simResults.filter(r => r.totalValue > tailCutoff);
+
+  const binMin = Math.floor(Math.min(...mainValues) / BIN_SIZE) * BIN_SIZE;
+  const binMax = Math.ceil(tailCutoff / BIN_SIZE) * BIN_SIZE;
   const numBins = Math.ceil((binMax - binMin) / BIN_SIZE);
 
-  // Build bins
+  // Build main bins
   const bins = Array.from({length: numBins}, (_, i) => ({
-    lo:       binMin + i * BIN_SIZE,
-    hi:       binMin + (i+1) * BIN_SIZE,
-    sims:     [],
-    count:    0,
-    estSum:   0,
+    lo: binMin + i*BIN_SIZE, hi: binMin + (i+1)*BIN_SIZE,
+    sims: [], count: 0, estSum: 0,
   }));
-
   simResults.forEach(r => {
-    const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins - 1);
+    if (r.totalValue > tailCutoff) return; // goes to overflow
+    const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins-1);
     if (idx >= 0 && idx < bins.length) {
-      bins[idx].sims.push(r);
-      bins[idx].count++;
-      bins[idx].estSum += r.estFraction;
+      bins[idx].sims.push(r); bins[idx].count++; bins[idx].estSum += r.estFraction;
     }
   });
 
-  // Stats for percentile lines
-  const sorted = [...values].sort((a,b) => a-b);
+  // Stats
   const p10  = sorted[Math.floor(sorted.length * 0.10)];
   const p50  = sorted[Math.floor(sorted.length * 0.50)];
   const p90  = sorted[Math.floor(sorted.length * 0.90)];
   const mean = Math.round(values.reduce((a,b)=>a+b,0)/values.length);
   const pctAboveRetail = Math.round(values.filter(v => v >= cfg.casePrice).length / values.length * 100);
+  const maxCount = Math.max(...bins.map(b => b.count), tailSims.length);
 
-  const maxCount = Math.max(...bins.map(b => b.count));
-
-  // SVG dimensions
-  const W = 900, H = 200;
-  const PAD = { top: 16, right: 20, bottom: 36, left: 48 };
+  // SVG dims — extra room on right for overflow bucket
+  const W = 940, H = 200;
+  const PAD = { top: 16, right: 80, bottom: 36, left: 48 };
   const chartW = W - PAD.left - PAD.right;
   const chartH = H - PAD.top  - PAD.bottom;
 
-  const barW  = chartW / numBins;
-  const xPos  = val => PAD.left + (val - binMin) / (binMax - binMin) * chartW;
-  const yPos  = count => PAD.top + chartH - (count / maxCount) * chartH;
+  // Allocate 85% of chartW to main bins, leave gap + overflow bucket
+  const mainW   = chartW * 0.82;
+  const gapW    = chartW * 0.04;
+  const overflowW = chartW * 0.10;
+  const overflowX = PAD.left + mainW + gapW;
+
+  const barW  = mainW / numBins;
+  const xPos  = val => PAD.left + (val - binMin) / (binMax - binMin) * mainW;
   const yH    = count => (count / maxCount) * chartH;
 
-  // Bin color by est fraction
   function binColor(b) {
     if (!b.count) return 'transparent';
     const avgEst = b.estSum / b.count;
@@ -815,11 +828,7 @@ function renderDistribution() {
     return 'var(--bin-est)';
   }
 
-  // CI shading between p10 and p90
-  const ciX1 = xPos(p10);
-  const ciX2 = xPos(p90);
-
-  // Build bars
+  // Main bars
   let barsSvg = '';
   bins.forEach((b, i) => {
     if (!b.count) return;
@@ -828,12 +837,9 @@ function renderDistribution() {
     const y = PAD.top + chartH - h;
     const color = binColor(b);
     const isSelected = selectedBin === i;
-    const opacity = selectedBin === null ? 0.85 : (isSelected ? 1.0 : 0.3);
-    barsSvg += `<rect
-      class="dist-bar"
-      data-bin="${i}"
-      x="${x + 1}" y="${y}"
-      width="${Math.max(1, barW - 2)}" height="${h}"
+    const opacity = selectedBin === null ? 0.85 : (isSelected ? 1.0 : 0.25);
+    barsSvg += `<rect class="dist-bar" data-bin="${i}"
+      x="${x+1}" y="${y}" width="${Math.max(1, barW-2)}" height="${h}"
       fill="${color}" opacity="${opacity}"
       style="cursor:pointer;transition:opacity 0.15s"
       onmouseenter="barHover(event,${i})"
@@ -842,64 +848,97 @@ function renderDistribution() {
     />`;
   });
 
-  // Y-axis ticks
-  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+  // Overflow (jackpot) bucket — striped, semi-transparent
+  const overflowH = yH(tailSims.length);
+  const overflowY = PAD.top + chartH - overflowH;
+  const isOverflowSelected = selectedBin === 'overflow';
+  const overflowOpacity = selectedBin === null ? 0.75 : (isOverflowSelected ? 1.0 : 0.25);
+  if (tailSims.length > 0) {
+    // Stripe pattern def
+    barsSvg += `<defs>
+      <pattern id="jackpot-stripe" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="6" stroke="#e8ff47" stroke-width="2" opacity="0.5"/>
+      </pattern>
+    </defs>`;
+    barsSvg += `<rect class="dist-bar" data-bin="overflow"
+      x="${overflowX}" y="${overflowY}" width="${overflowW}" height="${overflowH}"
+      fill="url(#jackpot-stripe)" opacity="${overflowOpacity}"
+      style="cursor:pointer;transition:opacity 0.15s"
+      onmouseenter="barHover(event,'overflow')"
+      onmouseleave="barLeave()"
+      onclick="selectBin('overflow')"
+    />`;
+    barsSvg += `<rect x="${overflowX}" y="${overflowY}" width="${overflowW}" height="${overflowH}"
+      fill="none" stroke="#e8ff47" stroke-width="1" opacity="0.3"/>`;
+    // Overflow label
+    const overflowMid = overflowX + overflowW/2;
+    barsSvg += `<text x="${overflowMid}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#555" font-size="7" font-family="Space Mono">jackpot</text>`;
+    barsSvg += `<text x="${overflowMid}" y="${PAD.top+chartH+23}" text-anchor="middle" fill="#444" font-size="7" font-family="Space Mono">top 5%</text>`;
+    // Count label above overflow bar
+    barsSvg += `<text x="${overflowMid}" y="${overflowY - 4}" text-anchor="middle" fill="#666" font-size="7" font-family="Space Mono">${tailSims.length}</text>`;
+    // Zigzag break indicator between main and overflow
+    const breakX = PAD.left + mainW + gapW/2;
+    barsSvg += `<path d="M${breakX-3},${PAD.top} L${breakX+3},${PAD.top+chartH/3} L${breakX-3},${PAD.top+chartH*2/3} L${breakX+3},${PAD.top+chartH}" stroke="#333" stroke-width="1.5" fill="none"/>`;
+  }
+
+  // Y-axis
   let yAxis = '';
-  yTicks.forEach(t => {
+  [0, 0.25, 0.5, 0.75, 1.0].forEach(t => {
     const y = PAD.top + chartH - t * chartH;
     const count = Math.round(t * maxCount);
-    yAxis += `<line x1="${PAD.left - 4}" y1="${y}" x2="${PAD.left}" y2="${y}" stroke="#333" stroke-width="1"/>`;
-    yAxis += `<text x="${PAD.left - 8}" y="${y + 4}" text-anchor="end" fill="#444" font-size="8" font-family="Space Mono">${count}</text>`;
+    yAxis += `<line x1="${PAD.left-4}" y1="${y}" x2="${PAD.left}" y2="${y}" stroke="#333" stroke-width="1"/>`;
+    yAxis += `<text x="${PAD.left-8}" y="${y+4}" text-anchor="end" fill="#444" font-size="8" font-family="Space Mono">${count}</text>`;
   });
 
-  // X-axis ticks — every 3rd bin or at multiples of $100
+  // X-axis ticks on main range only
   let xAxis = '';
-  const tickStep = Math.ceil(numBins / 10) * BIN_SIZE;
   for (let v = Math.ceil(binMin/100)*100; v <= binMax; v += 100) {
     const x = xPos(v);
-    xAxis += `<line x1="${x}" y1="${PAD.top+chartH}" x2="${x}" y2="${PAD.top+chartH+4}" stroke="#333" stroke-width="1"/>`;
-    xAxis += `<text x="${x}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#444" font-size="8" font-family="Space Mono">$${v}</text>`;
+    if (x > PAD.left && x < PAD.left + mainW) {
+      xAxis += `<line x1="${x}" y1="${PAD.top+chartH}" x2="${x}" y2="${PAD.top+chartH+4}" stroke="#333" stroke-width="1"/>`;
+      xAxis += `<text x="${x}" y="${PAD.top+chartH+14}" text-anchor="middle" fill="#444" font-size="8" font-family="Space Mono">$${v}</text>`;
+    }
   }
 
   // Gridlines
   let grid = '';
-  yTicks.slice(1).forEach(t => {
+  [0.25,0.5,0.75,1.0].forEach(t => {
     const y = PAD.top + chartH - t * chartH;
-    grid += `<line x1="${PAD.left}" y1="${y}" x2="${W - PAD.right}" y2="${y}" stroke="#1a1a1a" stroke-width="1"/>`;
+    grid += `<line x1="${PAD.left}" y1="${y}" x2="${W-PAD.right+60}" y2="${y}" stroke="#171717" stroke-width="1"/>`;
   });
 
-  // CI shading (p10–p90)
-  const ciShade = `<rect x="${ciX1}" y="${PAD.top}" width="${ciX2-ciX1}" height="${chartH}" fill="rgba(232,255,71,0.04)" />`;
-  const ciShade50 = `<rect x="${xPos(sorted[Math.floor(sorted.length*0.25)])}" y="${PAD.top}" width="${xPos(sorted[Math.floor(sorted.length*0.75)])-xPos(sorted[Math.floor(sorted.length*0.25)])}" height="${chartH}" fill="rgba(232,255,71,0.05)" />`;
+  // CI shading (p10–p90), clamped to main range
+  const ciX1 = Math.max(PAD.left, xPos(p10));
+  const ciX2 = Math.min(PAD.left+mainW, xPos(Math.min(p90, tailCutoff)));
+  const ci50X1 = Math.max(PAD.left, xPos(sorted[Math.floor(sorted.length*0.25)]));
+  const ci50X2 = Math.min(PAD.left+mainW, xPos(Math.min(sorted[Math.floor(sorted.length*0.75)], tailCutoff)));
+  const ciShade   = `<rect x="${ciX1}" y="${PAD.top}" width="${ciX2-ciX1}" height="${chartH}" fill="rgba(232,255,71,0.04)"/>`;
+  const ciShade50 = `<rect x="${ci50X1}" y="${PAD.top}" width="${ci50X2-ci50X1}" height="${chartH}" fill="rgba(232,255,71,0.05)"/>`;
 
-  // Reference lines: p10, median, p90, retail
+  // Reference lines (clamped to main range)
   function vLine(val, color, label, dashed=false) {
     const x = xPos(val);
-    if (x < PAD.left || x > W - PAD.right) return '';
+    if (x < PAD.left || x > PAD.left+mainW) return '';
     const dash = dashed ? 'stroke-dasharray="4,3"' : '';
     return `
       <line x1="${x}" y1="${PAD.top}" x2="${x}" y2="${PAD.top+chartH}" stroke="${color}" stroke-width="1" ${dash} opacity="0.7"/>
-      <text x="${x+3}" y="${PAD.top+10}" fill="${color}" font-size="7" font-family="Space Mono" opacity="0.8">${label}</text>`;
+      <text x="${x+3}" y="${PAD.top+10}" fill="${color}" font-size="7" font-family="Space Mono" opacity="0.85">${label}</text>`;
   }
-
-  const retailLine = vLine(cfg.casePrice, '#e8ff47', 'retail', false);
+  const retailLine = vLine(cfg.casePrice, '#e8ff47', 'retail');
   const p10Line    = vLine(p10,  'rgba(232,255,71,0.4)', 'p10', true);
   const p50Line    = vLine(p50,  'rgba(232,255,71,0.6)', 'med', true);
-  const p90Line    = vLine(p90,  'rgba(232,255,71,0.4)', 'p90', true);
+  const p90Line    = vLine(Math.min(p90, tailCutoff), 'rgba(232,255,71,0.4)', p90>tailCutoff?'p90+':'p90', true);
 
   const svg = `<svg class="dist-svg" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
     ${grid}
     ${ciShade}
     ${ciShade50}
     ${barsSvg}
-    ${retailLine}
-    ${p10Line}
-    ${p50Line}
-    ${p90Line}
+    ${retailLine}${p10Line}${p50Line}${p90Line}
     ${yAxis}
     ${xAxis}
     <line x1="${PAD.left}" y1="${PAD.top}" x2="${PAD.left}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/>
-    <line x1="${PAD.left}" y1="${PAD.top+chartH}" x2="${W-PAD.right}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/>
+    <line x1="${PAD.left}" y1="${PAD.top+chartH}" x2="${W-PAD.right+60}" y2="${PAD.top+chartH}" stroke="#2a2a2a" stroke-width="1"/>
   </svg>`;
 
   document.getElementById('chart-area').innerHTML = svg;
@@ -936,19 +975,33 @@ function renderDistribution() {
 // Bar interaction
 // ─────────────────────────────────────────────────────────────────────────────
 function barHover(event, binIdx) {
-  const b = getBins()[binIdx];
+  let b;
+  if (binIdx === 'overflow') {
+    const allBins = getBins();
+    b = allBins.find(bin => bin.isOverflow);
+  } else {
+    b = getBins()[binIdx];
+  }
   if (!b || !b.count) return;
 
   const cfg = getSetConfig(activeSet) || { casePrice: 500 };
-  const midVal = (b.lo + b.hi) / 2;
-  const roi = Math.round((midVal - cfg.casePrice) / cfg.casePrice * 100);
   const avgEst = b.count > 0 ? b.estSum / b.count : 0;
   const quality = avgEst < 0.25 ? 'real data' : avgEst < 0.60 ? 'mixed' : 'mostly projected';
 
   const tt = document.getElementById('chart-tooltip');
-  document.getElementById('tt-val').textContent = `$${b.lo.toLocaleString()} – $${b.hi.toLocaleString()}`;
-  document.getElementById('tt-count').textContent = `${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
-  document.getElementById('tt-roi').textContent = `${roi>=0?'+':''}${roi}%`;
+  if (b.isOverflow) {
+    const avgVal = Math.round(b.sims.reduce((s,r)=>s+r.totalValue,0)/b.sims.length);
+    const avgRoi = Math.round((avgVal - cfg.casePrice)/cfg.casePrice*100);
+    document.getElementById('tt-val').textContent = `jackpot — top 5% of outcomes`;
+    document.getElementById('tt-count').textContent = `${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
+    document.getElementById('tt-roi').textContent = `avg ${avgRoi>=0?'+':''}${avgRoi}%`;
+  } else {
+    const midVal = (b.lo + b.hi) / 2;
+    const roi = Math.round((midVal - cfg.casePrice) / cfg.casePrice * 100);
+    document.getElementById('tt-val').textContent = `$${b.lo.toLocaleString()} – $${b.hi.toLocaleString()}`;
+    document.getElementById('tt-count').textContent = `${b.count} of ${N_SIMS} (${Math.round(b.count/N_SIMS*100)}%)`;
+    document.getElementById('tt-roi').textContent = `${roi>=0?'+':''}${roi}%`;
+  }
   document.getElementById('tt-quality').textContent = quality;
   tt.classList.add('visible');
   positionTooltip(event);
@@ -971,42 +1024,56 @@ document.addEventListener('mousemove', e => {
 });
 
 function getBins() {
-  // Recompute bin structure from simResults
   if (!simResults.length) return [];
   const values = simResults.map(r => r.totalValue);
+  const sorted = [...values].sort((a,b)=>a-b);
+  const tailCutoff = sorted[Math.floor(sorted.length * 0.95)];
   const binMin = Math.floor(Math.min(...values) / BIN_SIZE) * BIN_SIZE;
-  const binMax = Math.ceil(Math.max(...values) / BIN_SIZE) * BIN_SIZE;
+  const binMax = Math.ceil(tailCutoff / BIN_SIZE) * BIN_SIZE;
   const numBins = Math.ceil((binMax - binMin) / BIN_SIZE);
   const bins = Array.from({length: numBins}, (_, i) => ({
     lo: binMin + i*BIN_SIZE, hi: binMin + (i+1)*BIN_SIZE,
     sims: [], count: 0, estSum: 0,
   }));
+  // Overflow bin
+  const overflowBin = { lo: tailCutoff, hi: Infinity, sims: [], count: 0, estSum: 0, isOverflow: true };
   simResults.forEach(r => {
-    const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins-1);
-    if (idx >= 0 && idx < bins.length) { bins[idx].sims.push(r); bins[idx].count++; bins[idx].estSum += r.estFraction; }
+    if (r.totalValue > tailCutoff) {
+      overflowBin.sims.push(r); overflowBin.count++; overflowBin.estSum += r.estFraction;
+    } else {
+      const idx = Math.min(Math.floor((r.totalValue - binMin) / BIN_SIZE), numBins-1);
+      if (idx >= 0 && idx < bins.length) { bins[idx].sims.push(r); bins[idx].count++; bins[idx].estSum += r.estFraction; }
+    }
   });
+  bins.push(overflowBin);
   return bins;
 }
 
 function selectBin(binIdx) {
-  const bins = getBins();
-  const b = bins[binIdx];
+  // binIdx can be a number (main bins) or 'overflow'
+  let b;
+  if (binIdx === 'overflow') {
+    const allBins = getBins();
+    b = allBins.find(bin => bin.isOverflow);
+  } else {
+    const bins = getBins();
+    b = bins[binIdx];
+  }
   if (!b || !b.count) return;
 
   selectedBin = binIdx;
 
   // Highlight selected bar, dim others
   document.querySelectorAll('.dist-bar').forEach(el => {
-    const idx = parseInt(el.dataset.bin);
-    el.setAttribute('opacity', idx === binIdx ? '1.0' : '0.25');
+    const idx = el.dataset.bin;
+    const isMatch = String(idx) === String(binIdx);
+    el.setAttribute('opacity', isMatch ? '1.0' : '0.25');
   });
 
   // Pick the median simulation from this bin
   const sortedSims = [...b.sims].sort((a,b) => a.totalValue - b.totalValue);
   const medSim = sortedSims[Math.floor(sortedSims.length / 2)];
   activePulls = medSim.pulls;
-
-  // Populate case grid
   populateCaseGrid(medSim);
 }
 
