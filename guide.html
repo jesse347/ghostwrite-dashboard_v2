@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ghostwrite · price guide</title>
+<title>ghostladder · price guide</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -208,221 +208,20 @@ body { background: var(--bg); color: var(--text); font-family: var(--body); font
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-/* ══════════════════════════════════════════════════
-   SHARED NAV + PAGE HEADER SYSTEM
-   ══════════════════════════════════════════════════ */
-
-/* ── Sticky header ── */
-header {
-  position: sticky !important;
-  top: 0; z-index: 100;
-  background: rgba(8,8,8,0.96) !important;
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border) !important;
-  padding: 0 32px !important;
-  height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-}
-
-/* ── Wordmark ── */
-.logo {
-  font-family: var(--display) !important;
-  font-size: 20px !important;
-  letter-spacing: 3px !important;
-  color: var(--text) !important;
-  text-decoration: none !important;
-  flex-shrink: 0;
-}
-.logo em { color: var(--accent) !important; font-style: normal !important; }
-
-/* ── Nav links ── */
-.nav {
-  display: flex !important;
-  gap: 0 !important;
-  align-items: center !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: none !important;
-  height: 56px !important;
-}
-.nav a {
-  font-family: var(--mono), monospace !important;
-  font-size: 10px !important;
-  letter-spacing: 1.5px !important;
-  text-transform: uppercase !important;
-  color: var(--muted) !important;
-  text-decoration: none !important;
-  padding: 0 18px !important;
-  height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  transition: color 0.15s !important;
-  border-bottom: 2px solid transparent !important;
-  white-space: nowrap !important;
-}
-.nav a:hover { color: var(--text) !important; }
-.nav a.active {
-  color: var(--text) !important;
-  border-bottom-color: var(--accent) !important;
-}
-
-/* ── Beta badge ── */
-.beta-badge {
-  font-size: 7px !important;
-  letter-spacing: 1px !important;
-  background: var(--accent) !important;
-  color: #000 !important;
-  padding: 1px 5px !important;
-  border-radius: 2px !important;
-  font-weight: 700 !important;
-  vertical-align: middle !important;
-}
-
-/* ── Header right ── */
-.header-right {
-  display: flex !important;
-  align-items: center !important;
-  gap: 16px !important;
-  flex-shrink: 0 !important;
-}
-
-/* ── Page header block (below nav, inside .page) ── */
-.page-header-block {
-  margin-bottom: 28px;
-  position: relative;
-}
-.page-header-title {
-  font-family: var(--display), sans-serif;
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  line-height: 1;
-}
-.page-header-sub {
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 8px;
-}
-
-/* ── Explainer button ── */
-.explainer-btn {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #000;
-  border: none;
-  cursor: pointer;
-  font-family: var(--mono), monospace;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  transition: transform 0.15s, background 0.15s;
-  line-height: 1;
-  padding: 0;
-}
-.explainer-btn:hover { transform: scale(1.15); }
-.explainer-btn.open { background: #000; color: var(--accent); border: 1.5px solid var(--accent); }
-
-/* ── Sticky note explainer panel ── */
-.explainer-panel {
-  display: none;
-  position: absolute;
-  top: calc(100% + 10px);
-  left: 0;
-  z-index: 200;
-  width: 420px;
-  background: #f7f068;
-  color: #1a1a1a;
-  padding: 20px 22px 18px;
-  box-shadow: 4px 6px 0 rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.4);
-  transform: rotate(-0.5deg);
-}
-.explainer-panel::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 32px;
-  width: 40px; height: 6px;
-  background: rgba(0,0,0,0.15);
-  border-radius: 0 0 2px 2px;
-}
-.explainer-panel.visible { display: block; }
-.explainer-panel p {
-  font-family: 'Instrument Serif', 'Georgia', serif;
-  font-size: 18px;
-  line-height: 1.55;
-  color: #1a1a1a;
-  margin-bottom: 10px;
-}
-.explainer-panel p:last-child { margin-bottom: 0; }
-.explainer-panel em { font-style: italic; }
-.explainer-panel a { color: #1a1a1a; font-weight: 700; }
-.explainer-panel a:hover { text-decoration: underline; }
-.explainer-close {
-  position: absolute; top: 10px; right: 12px;
-  background: none; border: none; cursor: pointer;
-  font-size: 16px; color: rgba(0,0,0,0.4); padding: 2px 6px;
-}
-.explainer-close:hover { color: #1a1a1a; }
-
-/* ── Section label (shared) ── */
-.section-label {
-  font-size: 9px !important;
-  letter-spacing: 3px !important;
-  text-transform: uppercase !important;
-  color: var(--muted) !important;
-  margin-bottom: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
-}
-.section-label::after {
-  content: '' !important;
-  flex: 1 !important;
-  height: 1px !important;
-  background: var(--border) !important;
-}
-
-.page-header-block { padding: 20px 32px 0; margin-bottom: 0; }
-.page-header-title { font-size: 22px; }
-.page { height: calc(100vh - 56px) !important; }
-
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">ghost<em>ladder</em></div>
-  <nav class="nav">
-    <a href="index.html">SALES INTEL</a>
-    <a href="listings.html">LISTINGS INTEL</a>
-    <a href="guide.html" class="active">PRICE GUIDE</a>
-    <a href="heatmap.html">SET MAP</a>
-    <a href="case-sim.html">ROI SIM <span class="beta-badge">BETA</span></a>
-  </nav>
-</header>
-
-<div class="page-header-block">
-  <div class="page-header-title">
-    PRICE GUIDE
-    <button class="explainer-btn" onclick="toggleExplainer()" title="What is this?">?</button>
-  </div>
-  <div class="page-header-sub">every tracked player · variant · set · with 30d, 90d &amp; all-time averages</div>
-  <div class="explainer-panel" id="explainer-panel">
-    <button class="explainer-close" onclick="toggleExplainer()">✕</button>
-    <p>Every player/variant combination we track, with 30-day, 90-day, and all-time averages. Click any row to see the full sales history.</p><p>Data comes from <a href="index.html">Sales Intel</a>. For active eBay listings, see <a href="listings.html">Listings Intel →</a></p>
+<div class="header">
+  <div class="logo">ghostladder <span>price guide</span></div>
+  <div class="nav-links">
+    <a href="index.html">← dashboard</a>
+    <a href="heatmap.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">heat map →</a>
+    <a href="case-sim.html" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);text-decoration:none">case sim →</a>
+    <a href="guide.html" class="active">price guide</a>
   </div>
 </div>
+
 <div class="page">
 
   <!-- Left: Product list -->
@@ -465,7 +264,43 @@ header {
 </div>
 
 <script>
-const DATA_URL = 'https://script.google.com/macros/s/AKfycbzCIVyCjVqCd6OfFGRFkb34mtgYeb7KaO6X5kkd8Mz3WHks9fzXQ0cjPXIhfJjUelBhBw/exec';
+const SB_URL = 'https://sabzbyuqrondoayhwoth.supabase.co';
+const SB_KEY = 'sb_publishable_KAbUO5YvOapq_kWkHqt7BA_UTwrP60s';
+const SB_H = {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json'};
+
+async function rpc(fn, p={}) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {method:'POST',headers:SB_H,body:JSON.stringify(p)});
+  if (!r.ok) throw new Error(`${fn}: ${r.status}`);
+  return r.json();
+}
+
+async function sbFetch(table, params) {
+  const qs = Object.entries(params).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}&order=date.desc`, {headers:SB_H});
+  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  return r.json();
+}
+
+async function sbPatch(table, match, data) {
+  const qs = Object.entries(match).map(([k,v]) => `${k}=eq.${encodeURIComponent(v)}`).join('&');
+  const r = await fetch(`${SB_URL}/rest/v1/${table}?${qs}`, {
+    method:'PATCH', headers:{...SB_H,'Prefer':'return=minimal'}, body:JSON.stringify(data)
+  });
+  if (!r.ok) throw new Error('PATCH ' + r.status);
+}
+
+function normProduct(r) {
+  const setStr = (r.set_name || '').toUpperCase();
+  return {
+    set: r.set_name, player: r.player, variant: r.variant,
+    totalSales: +r.total_sales || 0, avgPrice: +r.avg_price || 0,
+    avg30d: +r.avg_30d || 0, sales30d: +r.sales_30d || 0,
+    avg90d: +r.avg_90d || 0, sales90d: +r.sales_90d || 0,
+    lastSaleDate: r.last_sale_date, lastSalePrice: +r.last_sale_price || 0,
+    retail: +r.retail_price || 0,
+    multiplier: (r.retail_price && r.avg_price) ? Math.round(+r.avg_price / +r.retail_price * 10) / 10 : 0,
+  };
+}
 
 const VARIANT_COLORS = {
   Fire: 'var(--fire)', Chrome: 'var(--chrome)', Gold: 'var(--gold)',
@@ -474,7 +309,6 @@ const VARIANT_COLORS = {
 const VARIANT_ORDER = ['Fire','Chrome','Gold','Emerald','Vides','Victory','Base'];
 
 let allProducts = [];
-let allListings = [];
 let activeLeague = 'ALL';
 let activeVariant = 'ALL';
 let sortCol = 'avgPrice';
@@ -483,45 +317,32 @@ let selectedProduct = null;
 
 // ── Boot ────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  const data = await fetchData();
-  allProducts = (data.products || []).filter(p => p.player && p.player !== 'Unknown');
-  allListings = (data.allListings || []).filter(l => l.player && l.player !== 'Unknown');
-  buildVariantChips();
+  try {
+    const pi = await rpc('get_price_intelligence');
+    allProducts = pi.filter(r => r.player && r.player !== 'Unknown').map(normProduct);
+    // allListings loaded on-demand when drawer opens
+    buildVariantChips();
+  } catch(e) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty">failed to load data: ' + e.message + '</div>';
+    return;
+  }
 
-  // Check for ?player= URL param — pre-filter to that player
   const params = new URLSearchParams(window.location.search);
   const urlPlayer = params.get('player');
   if (urlPlayer) {
-    // Pre-fill search box with player name
     const searchEl = document.getElementById('search-input');
     if (searchEl) searchEl.value = urlPlayer;
   }
-
   applyFilters();
-
-  // After table renders, if a player was specified, open their Base drawer
   if (urlPlayer) {
     const match = allProducts.find(p =>
       p.player.toLowerCase() === urlPlayer.toLowerCase() && p.variant === 'Base'
     ) || allProducts.find(p =>
       p.player.toLowerCase() === urlPlayer.toLowerCase()
     );
-    if (match) {
-      setTimeout(() => openDrawer(match), 100);
-    }
+    if (match) setTimeout(() => openDrawer(match), 100);
   }
 });
-
-async function fetchData() {
-  try {
-    const res = await fetch(DATA_URL, { method: 'GET', redirect: 'follow' });
-    const text = await res.text();
-    return JSON.parse(text);
-  } catch(e) {
-    document.getElementById('table-wrap').innerHTML = '<div class="empty">failed to load data</div>';
-    return { products: [], allListings: [] };
-  }
-}
 
 // ── Variant chips ────────────────────────────────────────────────────────────
 function buildVariantChips() {
@@ -631,26 +452,15 @@ function sortBy(col) {
 }
 
 // ── Drawer ───────────────────────────────────────────────────────────────────
-function openDrawer(product) {
+async function openDrawer(product) {
   selectedProduct = product;
-
-  // Update selected row highlight
   applyFilters();
 
-  // Get listings for this product
-  const listings = allListings.filter(l =>
-    l.set === product.set &&
-    l.player === product.player &&
-    l.variant === product.variant
-  ).sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  // Header
   const vClass = 'v-' + (product.variant||'base').toLowerCase();
   document.getElementById('drawer-title').innerHTML =
     `${product.player} <span class="v-tag ${vClass}" style="margin-left:6px">${product.variant}</span>`;
   document.getElementById('drawer-subtitle').textContent = product.set;
 
-  // Stats
   document.getElementById('drawer-stats').innerHTML = `
     <div><div class="drawer-stat-label">Avg Price</div><div class="drawer-stat-value">${product.avgPrice ? '$' + Math.round(product.avgPrice) : '—'}</div></div>
     <div><div class="drawer-stat-label">Last Sale</div><div class="drawer-stat-value">${product.lastSalePrice ? '$' + Math.round(product.lastSalePrice) : '—'}</div></div>
@@ -658,16 +468,29 @@ function openDrawer(product) {
     <div><div class="drawer-stat-label">30d Sales</div><div class="drawer-stat-value">${product.sales30d || 0}</div></div>
   `;
 
-  // Listings
-  if (!listings.length) {
-    document.getElementById('drawer-listings').innerHTML = '<div class="empty">no listings found</div>';
-  } else {
-    document.getElementById('drawer-listings').innerHTML = listings.map(l => renderListingCard(l)).join('');
-  }
-
-  // Open drawer
+  document.getElementById('drawer-listings').innerHTML = '<div class="loading-wrap"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>';
   document.getElementById('drawer').classList.add('open');
   document.getElementById('product-list').classList.add('drawer-open');
+
+  try {
+    const rawListings = await rpc('get_sales_by_combo', {
+      p_set_name: product.set, p_player: product.player, p_variant: product.variant
+    });
+    // Normalize listing fields
+    const listings = rawListings.map(l => ({
+      id: l.id, price: +l.price || 0, date: l.date,
+      image: l.image_url, url: l.ebay_url, afa: l.afa_grade,
+      flagged: l.flagged, title: l.title || '',
+      set: l.set_name, player: l.player, variant: l.variant,
+    }));
+    if (!listings.length) {
+      document.getElementById('drawer-listings').innerHTML = '<div class="empty">no listings found</div>';
+    } else {
+      document.getElementById('drawer-listings').innerHTML = listings.map(l => renderListingCard(l)).join('');
+    }
+  } catch(e) {
+    document.getElementById('drawer-listings').innerHTML = '<div class="empty">failed to load listings</div>';
+  }
 }
 
 function closeDrawer() {
@@ -679,6 +502,7 @@ function closeDrawer() {
 
 // ── Listing card ─────────────────────────────────────────────────────────────
 function renderListingCard(listing) {
+  const saleId = listing.id;
   const flagClass = listing.flagged ? 'flagged' : '';
   const flagLabel = listing.flagged ? '⚑ flagged' : 'flag';
   const flagBtnClass = listing.flagged ? 'flagged' : '';
@@ -696,7 +520,7 @@ function renderListingCard(listing) {
     ? `<a class="listing-link" href="${listing.url}" target="_blank" rel="noopener">↗ view listing</a>`
     : '';
 
-  return `<div class="listing-card ${flagClass}" id="card-${listing.rowIndex}">
+  return `<div class="listing-card ${flagClass}" id="card-${saleId}">
     ${imgHtml}
     <div class="listing-body">
       <div class="listing-title">${listing.title}</div>
@@ -709,77 +533,37 @@ function renderListingCard(listing) {
       </div>
     </div>
     <div class="listing-actions">
-      <button class="flag-btn ${flagBtnClass}" onclick="toggleFlag(event, ${listing.rowIndex}, ${listing.flagged})">${flagLabel}</button>
+      <button class="flag-btn ${flagBtnClass}" onclick="toggleFlag(event, '${saleId}', ${listing.flagged})">${flagLabel}</button>
     </div>
   </div>`;
 }
 
 // ── Flagging ─────────────────────────────────────────────────────────────────
-async function toggleFlag(event, rowIndex, currentlyFlagged) {
+async function toggleFlag(event, saleId, currentlyFlagged) {
   event.stopPropagation();
   const newFlagged = !currentlyFlagged;
 
   // Optimistic UI update
-  const card = document.getElementById('card-' + rowIndex);
+  const card = document.getElementById('card-' + saleId);
   const btn = card.querySelector('.flag-btn');
   if (newFlagged) {
-    card.classList.add('flagged');
-    btn.classList.add('flagged');
-    btn.textContent = '⚑ flagged';
+    card.classList.add('flagged'); btn.classList.add('flagged'); btn.textContent = '⚑ flagged';
   } else {
-    card.classList.remove('flagged');
-    btn.classList.remove('flagged');
-    btn.textContent = 'flag';
+    card.classList.remove('flagged'); btn.classList.remove('flagged'); btn.textContent = 'flag';
   }
 
-  // Update local data
-  const listing = allListings.find(l => l.rowIndex === rowIndex);
-  if (listing) listing.flagged = newFlagged;
-
-  // Write to sheet via Apps Script
   try {
-    // Google Apps Script doPost requires no-cors mode
-    await fetch(DATA_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ rowIndex, flagged: newFlagged }),
-    });
+    await sbPatch('sales', {id: saleId}, {flagged: newFlagged});
   } catch(e) {
     // Revert on error
-    if (listing) listing.flagged = currentlyFlagged;
     if (newFlagged) {
-      card.classList.remove('flagged');
-      btn.classList.remove('flagged');
-      btn.textContent = 'flag';
+      card.classList.remove('flagged'); btn.classList.remove('flagged'); btn.textContent = 'flag';
     } else {
-      card.classList.add('flagged');
-      btn.classList.add('flagged');
-      btn.textContent = '⚑ flagged';
+      card.classList.add('flagged'); btn.classList.add('flagged'); btn.textContent = '⚑ flagged';
     }
     console.error('Flag failed:', e);
   }
 }
-
-function toggleExplainer() {
-  const panel = document.getElementById('explainer-panel');
-  const btn   = document.querySelector('.explainer-btn');
-  const isOpen = panel.classList.contains('visible');
-  panel.classList.toggle('visible', !isOpen);
-  if (btn) btn.classList.toggle('open', !isOpen);
-}
-// Close when clicking outside
-document.addEventListener('click', function(e) {
-  const panel = document.getElementById('explainer-panel');
-  const btn   = document.querySelector('.explainer-btn');
-  if (panel && panel.classList.contains('visible')) {
-    if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
-      panel.classList.remove('visible');
-      if (btn) btn.classList.remove('open');
-    }
-  }
-});
-
 </script>
 </body>
 </html>
